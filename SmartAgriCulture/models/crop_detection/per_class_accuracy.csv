@@ -1,0 +1,15 @@
+crop,correct,total,accuracy
+banana,749,750,99.8667
+blackgram,738,750,98.4
+chickpea,750,750,100.0
+grapes,750,750,100.0
+kidneybeans,749,750,99.8667
+lentil,739,750,98.5333
+maize,749,750,99.8667
+mango,750,750,100.0
+mothbeans,716,750,95.4667
+mungbean,750,750,100.0
+pigeonpeas,735,750,98.0
+pomegranate,749,750,99.8667
+rice,747,750,99.6
+watermelon,494,494,100.0

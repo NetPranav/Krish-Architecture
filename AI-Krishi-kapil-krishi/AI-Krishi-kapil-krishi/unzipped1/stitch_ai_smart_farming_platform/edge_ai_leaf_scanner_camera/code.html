@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edge-AI Leaf Scanner</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#00639a",
+                        "inverse-primary": "#88d982",
+                        "tertiary-fixed-dim": "#f8bd2a",
+                        "on-tertiary-fixed": "#261a00",
+                        "secondary-fixed": "#cee5ff",
+                        "on-surface": "#1a1c1c",
+                        "on-background": "#1a1c1c",
+                        "surface-bright": "#f9f9f9",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#6e5100",
+                        "error-container": "#ffdad6",
+                        "inverse-on-surface": "#f0f1f1",
+                        "background": "#f9f9f9",
+                        "on-primary-fixed": "#002204",
+                        "on-secondary-container": "#00436a",
+                        "tertiary-fixed": "#ffdfa0",
+                        "on-secondary-fixed-variant": "#004a75",
+                        "surface": "#f9f9f9",
+                        "outline-variant": "#bfcaba",
+                        "primary-fixed": "#a3f69c",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#ffefd7",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-primary-container": "#cbffc2",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eeeeee",
+                        "primary-fixed-dim": "#88d982",
+                        "surface-container-high": "#e8e8e8",
+                        "primary-container": "#2e7d32",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "inverse-surface": "#2f3131",
+                        "primary": "#0d631b",
+                        "tertiary-container": "#8c6800",
+                        "on-secondary-fixed": "#001d32",
+                        "on-surface-variant": "#40493d",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#1b6d24",
+                        "secondary-fixed-dim": "#96ccff",
+                        "secondary-container": "#51b2fe",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#005312",
+                        "outline": "#707a6c",
+                        "surface-dim": "#dadada",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "unit": "8px",
+                        "card-padding": "24px",
+                        "container-margin": "24px",
+                        "touch-target-min": "48px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "hindi-body": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "hindi-body": ["18px", { "lineHeight": "30px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        /* Ensuring literal icons render correctly */
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background h-screen w-screen overflow-hidden flex flex-col md:flex-row antialiased">
+<!-- Camera Viewport (Main Canvas) -->
+<main class="relative flex-1 bg-black overflow-hidden flex flex-col h-[618px] md:h-full">
+<!-- Simulated Camera Feed Background -->
+<div class="absolute inset-0 bg-cover bg-center opacity-90" data-alt="close up view of a green crop leaf held steady against a natural field background, bright daylight highlighting leaf veins" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDd16irBxtrJ3oJaI8YKk0z-29BBb_T650NYF22dgbV45KDZ2xJ03DK3HZ1KLKE7EMstlq4-tUccgtFFpCrgDXQbFwxfMpXCfyK2rqV17KF3rzaGgnjzNtx93_6F9g7Gld6wm-9rhL6ua9a-hU4RZ7FjkaMc72oRkEgINTjuc35Jbzck-67B0XP2EvpLrG0hGBSyTvZbYNTWk1yzrDLUZ0xHgnCd_AeAnjTReOVBqtpVvRsecGDWP_NBuIEuKTvBxI-6YLJP3m-4Q');">
+</div>
+<!-- Dark Overlay for better UI contrast -->
+<div class="absolute inset-0 bg-black/20"></div>
+<!-- Top Actions / Nav (Task-focused, suppressed main shell) -->
+<header class="relative z-10 w-full p-4 flex justify-between items-start">
+<button aria-label="Go back" class="w-12 h-12 rounded-full bg-surface/30 backdrop-blur-xl text-white flex items-center justify-center hover:bg-surface/50 transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">arrow_back</span>
+</button>
+<div class="flex gap-2">
+<button aria-label="Toggle Flash" class="w-12 h-12 rounded-full bg-surface/30 backdrop-blur-xl text-white flex items-center justify-center hover:bg-surface/50 transition-colors">
+<span class="material-symbols-outlined">flash_off</span>
+</button>
+</div>
+</header>
+<!-- Top Tip Overlay -->
+<div class="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-[90%] max-w-sm">
+<div class="bg-surface/80 backdrop-blur-xl border border-white/20 rounded-full px-4 py-3 flex items-center justify-center gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.15)]">
+<span class="material-symbols-outlined text-tertiary-fixed-dim" style="font-variation-settings: 'FILL' 1;">light_mode</span>
+<span class="font-label-lg text-label-lg text-on-surface">Ensure clear daylight for best results</span>
+</div>
+</div>
+<!-- Scanning Reticle Area -->
+<div class="relative flex-1 flex items-center justify-center pointer-events-none z-10">
+<!-- Reticle Frame -->
+<div class="w-64 h-64 sm:w-80 sm:h-80 relative">
+<!-- Corners -->
+<div class="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-primary rounded-tl-lg"></div>
+<div class="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-primary rounded-tr-lg"></div>
+<div class="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-primary rounded-bl-lg"></div>
+<div class="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-primary rounded-br-lg"></div>
+<!-- Central Focus Area (Slightly lighter inner frame to imply target) -->
+<div class="absolute inset-2 border border-white/30 rounded"></div>
+<!-- Static 'Scanning' Line (representing active AI processing state without CSS animation) -->
+<div class="absolute top-1/2 left-0 w-full h-[2px] bg-primary shadow-[0_0_15px_4px_rgba(46,125,50,0.5)] transform -translate-y-1/2"></div>
+</div>
+</div>
+</main>
+<!-- Sidebar / Bottom Controls Panel -->
+<aside class="w-full md:w-[400px] bg-surface h-[265px] md:h-full flex flex-col shadow-[-4px_0_24px_rgba(0,0,0,0.05)] z-20 relative rounded-t-xl md:rounded-none">
+<!-- Drag handle for mobile (visual only) -->
+<div class="w-full flex justify-center py-2 md:hidden">
+<div class="w-12 h-1.5 bg-outline-variant rounded-full"></div>
+</div>
+<div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-6">
+<!-- Recent Scans Section -->
+<section class="hidden md:flex flex-col gap-4">
+<h2 class="font-headline-md text-headline-md text-on-surface">Recent Scans</h2>
+<div class="flex flex-col gap-3">
+<!-- Scan Item 1 -->
+<div class="flex items-center gap-4 p-3 bg-surface-container rounded-xl hover:bg-surface-container-high transition-colors cursor-pointer">
+<img alt="thumbnail of a diseased leaf" class="w-14 h-14 object-cover rounded-lg" data-alt="small square thumbnail image showing a close up of a crop leaf with brown spots" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdipwoLUOBKdtuCbQUXkefAgf2k86pRhPXIUx-yPzL1Eg4g08xPXgeysBYW37SqFx8TpE5VN-wsuL8ZdNiCu_6rKME4vN7RlCuMdRZZQDtphWgFUjkSMhhITx4Q4HOxy3PtoTz-upiaJDMgF0vOfL7XykUlfwRFLfN9Ibyq7aj2A9_aDoocy1tdISdj_aY3A4nvSZFtWD2TfxH8CGxXsSFMIWlAgg0QSHbGtxYbBN37wW2222OwgK_M1S8xanPm2mgAbPAgiuGfA"/>
+<div class="flex-1 min-w-0">
+<p class="font-body-md text-body-md text-on-surface truncate">Tomato Blight Suspect</p>
+<p class="font-body-sm text-sm text-outline">Today, 10:42 AM</p>
+</div>
+<div class="bg-error-container text-on-error-container px-2 py-1 rounded text-xs font-label-lg flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span> Needs Review
+                        </div>
+</div>
+<!-- Scan Item 2 -->
+<div class="flex items-center gap-4 p-3 bg-surface-container rounded-xl hover:bg-surface-container-high transition-colors cursor-pointer">
+<img alt="thumbnail of a healthy leaf" class="w-14 h-14 object-cover rounded-lg" data-alt="small square thumbnail image showing a bright green healthy crop leaf" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCEakDMFJi1fLlxOsBfAWGE11FrGAxRknwQDkV3u8IkSL7Bx3YwB45FJ3mEOvmaya3F35J60vdZo-_my1JLE6674NWQDsMUB6XkdLZWKoDWpxX3Z7n9U_8xCJwGJ6RPRvNfU65uTuUjHKazhvyozdgBfBgf8ghSmhHSGo48bGTyI9NEHb5ZtIg-MynBTEfN_NAHJmZIDNMJqDC7DIPKuJ29Y-kOq1ndIBQf3a8DtBd1FGwtPncwITYt6CstDmb_AF7KLjWawGD_Sg"/>
+<div class="flex-1 min-w-0">
+<p class="font-body-md text-body-md text-on-surface truncate">Wheat Field Section B</p>
+<p class="font-body-sm text-sm text-outline">Yesterday, 4:15 PM</p>
+</div>
+<div class="bg-primary-container text-on-primary-container px-2 py-1 rounded text-xs font-label-lg flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Healthy
+                        </div>
+</div>
+</div>
+</section>
+</div>
+<!-- Primary Controls Area (Sticky Bottom) -->
+<div class="p-6 bg-surface border-t border-surface-container-highest flex items-center justify-between mt-auto">
+<!-- Gallery Button -->
+<button class="min-w-[48px] min-h-[48px] w-14 h-14 rounded-full bg-surface-container flex flex-col items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined">photo_library</span>
+</button>
+<!-- Main Capture Button -->
+<div class="relative flex items-center justify-center">
+<div class="absolute inset-0 rounded-full border-4 border-primary-container opacity-30 scale-110"></div>
+<button aria-label="Capture Scan" class="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-[0_4px_20px_rgba(46,125,50,0.3)] hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-[32px]" style="font-variation-settings: 'FILL' 1;">document_scanner</span>
+</button>
+</div>
+<!-- Help/Info Button -->
+<button class="min-w-[48px] min-h-[48px] w-14 h-14 rounded-full flex flex-col items-center justify-center text-outline hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+</aside>
+</body></html>

@@ -1,0 +1,61 @@
+{
+  "feature_cols": [
+    "N",
+    "P",
+    "K",
+    "temperature",
+    "humidity",
+    "ph",
+    "rainfall",
+    "N_P_ratio",
+    "N_K_ratio",
+    "P_K_ratio",
+    "THI",
+    "water_availability",
+    "pH_stress"
+  ],
+  "target_col": "label",
+  "num_classes": 14,
+  "class_names": [
+    "banana",
+    "blackgram",
+    "chickpea",
+    "grapes",
+    "kidneybeans",
+    "lentil",
+    "maize",
+    "mango",
+    "mothbeans",
+    "mungbean",
+    "pigeonpeas",
+    "pomegranate",
+    "rice",
+    "watermelon"
+  ],
+  "test_metrics": {
+    "accuracy": 0.992288,
+    "balanced_accuracy": 0.992476,
+    "f1_macro": 0.992439,
+    "f1_weighted": 0.992276,
+    "cv_mean_accuracy": 0.992557,
+    "cv_std_accuracy": 0.001369
+  },
+  "best_params": {
+    "n_estimators": 693,
+    "learning_rate": 0.07331953467711058,
+    "max_depth": 6,
+    "min_child_weight": 4,
+    "subsample": 0.6380501334454864,
+    "colsample_bytree": 0.40037380366227054,
+    "colsample_bylevel": 0.9647202834048598,
+    "reg_alpha": 0.0005632106806819862,
+    "reg_lambda": 0.088157343607158,
+    "gamma": 1.2294189563755327,
+    "max_delta_step": 0,
+    "eval_metric": "mlogloss",
+    "random_state": 42,
+    "use_label_encoder": false,
+    "tree_method": "hist"
+  },
+  "trained_at": "2026-04-29T02:33:02"
+}

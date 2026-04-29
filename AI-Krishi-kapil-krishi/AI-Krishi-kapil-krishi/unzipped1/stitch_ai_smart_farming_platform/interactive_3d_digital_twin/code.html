@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Interactive 3D Digital Twin</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#00639a",
+                        "inverse-primary": "#88d982",
+                        "tertiary-fixed-dim": "#f8bd2a",
+                        "on-tertiary-fixed": "#261a00",
+                        "secondary-fixed": "#cee5ff",
+                        "on-surface": "#1a1c1c",
+                        "on-background": "#1a1c1c",
+                        "surface-bright": "#f9f9f9",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#6e5100",
+                        "error-container": "#ffdad6",
+                        "inverse-on-surface": "#f0f1f1",
+                        "background": "#f9f9f9",
+                        "on-primary-fixed": "#002204",
+                        "on-secondary-container": "#00436a",
+                        "tertiary-fixed": "#ffdfa0",
+                        "on-secondary-fixed-variant": "#004a75",
+                        "surface": "#f9f9f9",
+                        "outline-variant": "#bfcaba",
+                        "primary-fixed": "#a3f69c",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#ffefd7",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-primary-container": "#cbffc2",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eeeeee",
+                        "primary-fixed-dim": "#88d982",
+                        "surface-container-high": "#e8e8e8",
+                        "primary-container": "#2e7d32",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "inverse-surface": "#2f3131",
+                        "primary": "#0d631b",
+                        "tertiary-container": "#8c6800",
+                        "on-secondary-fixed": "#001d32",
+                        "on-surface-variant": "#40493d",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#1b6d24",
+                        "secondary-fixed-dim": "#96ccff",
+                        "secondary-container": "#51b2fe",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#005312",
+                        "outline": "#707a6c",
+                        "surface-dim": "#dadada",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "unit": "8px",
+                        "card-padding": "24px",
+                        "container-margin": "24px",
+                        "touch-target-min": "48px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "hindi-body": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "hindi-body": ["18px", { "lineHeight": "30px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        /* Isometric grid simulation */
+        .iso-container {
+            transform: rotateX(60deg) rotateZ(-45deg);
+            transform-style: preserve-3d;
+        }
+        .iso-zone {
+            transition: all 0.3s ease;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+        }
+        .iso-zone:hover {
+            transform: translateZ(10px);
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.8), 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .iso-marker {
+            transform: rotateZ(45deg) rotateX(-60deg);
+        }
+        
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface h-screen overflow-hidden flex flex-col antialiased">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-green-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(46,125,50,0.15)]">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-label-lg text-label-lg">
+                U
+            </div>
+<h1 class="text-lg font-bold text-green-700 dark:text-green-500 font-headline-md text-headline-md tracking-tight">Nashik, MH</h1>
+</div>
+<div class="flex items-center gap-4">
+<!-- Language Toggle (Bilingual) -->
+<div class="hidden md:flex bg-surface-container-high rounded-full p-1">
+<button class="px-3 py-1 rounded-full bg-primary text-on-primary font-label-lg text-label-lg shadow-sm">EN</button>
+<button class="px-3 py-1 rounded-full text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-variant transition-colors">HI</button>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-green-50 dark:hover:bg-slate-800 transition-colors text-green-800 dark:text-green-400">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 relative mt-16 pb-20 md:pb-0 flex">
+<!-- Interactive 3D Canvas -->
+<div class="flex-1 relative bg-surface-variant overflow-hidden flex items-center justify-center">
+<!-- Background Image mimicking farm terrain before grid -->
+<div class="absolute inset-0 bg-cover bg-center opacity-30" data-alt="aerial view of fertile farmland with rich brown soil and green crops in bright daylight" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCia9xR7hCQOeCWGc8VqT2xybOly57wX5nk2McdSc_EOe6kLe3YDkazcdwR2Gwv8Zzbj_-SFOZlhNWPqiZ8nGvrNK4ACZPmPHOS0ijbBqtKijlX5jL4r_q4xgeHoAdLM1lONbJ0tzso7PSeeJjyuryCPh_GHY10mt-2v0hwgX3wgevcqWCCiGvsVV5RkqlimPCoMs1-Eju95J80lP0A-hhz5e4bTkdTFHxttxSaPrqv0s3NtXXnGbsYFxhztCo-Io0pYk--TbSvog')"></div>
+<!-- Full-screen immersion button -->
+<button class="absolute top-6 right-6 z-20 w-12 h-12 bg-white rounded-full shadow-[0_4px_20px_rgba(46,125,50,0.15)] flex items-center justify-center text-primary hover:bg-primary-fixed transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined">fullscreen</span>
+</button>
+<!-- 3D Grid Wrapper -->
+<div class="relative w-[800px] h-[800px] iso-container mt-10">
+<!-- Grid Background -->
+<div class="absolute inset-0 grid grid-cols-4 grid-rows-4 gap-2 p-2 bg-surface-container-highest rounded-xl shadow-2xl">
+<!-- Zone 1: Healthy -->
+<div class="iso-zone bg-primary-container/80 rounded-lg relative flex items-center justify-center cursor-pointer group col-span-2 row-span-2">
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
+<!-- Sensor Marker -->
+<div class="iso-marker absolute top-1/4 left-1/4 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-primary transform -translate-x-1/2 -translate-y-1/2">
+<span class="material-symbols-outlined text-sm fill-icon">sensors</span>
+</div>
+</div>
+<!-- Zone 2: Attention -->
+<div class="iso-zone bg-tertiary-fixed-dim/80 rounded-lg relative flex items-center justify-center cursor-pointer group col-span-2">
+<div class="absolute inset-0 bg-tertiary/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
+<div class="iso-marker absolute top-1/2 left-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-tertiary transform -translate-x-1/2 -translate-y-1/2">
+<span class="material-symbols-outlined text-sm fill-icon">sensors</span>
+</div>
+</div>
+<!-- Zone 3: Healthy -->
+<div class="iso-zone bg-primary-fixed-dim/80 rounded-lg relative flex items-center justify-center cursor-pointer group">
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
+</div>
+<!-- Zone 4: Dry (Active/Highlighted in overlay) -->
+<div class="iso-zone bg-error-container/90 rounded-lg relative flex items-center justify-center cursor-pointer group shadow-[0_0_20px_rgba(186,26,26,0.4)] border-2 border-error">
+<div class="absolute inset-0 bg-error/10 rounded-lg"></div>
+<div class="iso-marker absolute top-1/2 left-1/2 w-10 h-10 bg-white rounded-full shadow-lg flex items-center justify-center text-error transform -translate-x-1/2 -translate-y-1/2 animate-pulse">
+<span class="material-symbols-outlined fill-icon">warning</span>
+</div>
+</div>
+<!-- Zone 5: Irrigating -->
+<div class="iso-zone bg-secondary-fixed/80 rounded-lg relative flex items-center justify-center cursor-pointer group col-span-2 row-span-2">
+<div class="absolute inset-0 bg-secondary/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
+<div class="iso-marker absolute top-1/3 left-2/3 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center text-secondary transform -translate-x-1/2 -translate-y-1/2">
+<span class="material-symbols-outlined text-sm fill-icon">water_drop</span>
+</div>
+</div>
+<!-- Zone 6: Healthy -->
+<div class="iso-zone bg-primary-container/80 rounded-lg relative flex items-center justify-center cursor-pointer group col-span-2">
+<div class="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg"></div>
+</div>
+</div>
+</div>
+<!-- Legend Overlay (Bottom Left) -->
+<div class="absolute bottom-6 left-6 z-20 glass-panel rounded-xl p-4 shadow-[0_4px_20px_rgba(46,125,50,0.15)] flex flex-col gap-3">
+<h3 class="font-label-lg text-label-lg text-on-surface">Zone Status Legend</h3>
+<div class="flex items-center gap-2">
+<div class="w-4 h-4 rounded bg-primary-container"></div>
+<span class="font-body-md text-body-md text-on-surface-variant">Optimal Health</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-4 h-4 rounded bg-tertiary-fixed-dim"></div>
+<span class="font-body-md text-body-md text-on-surface-variant">Attention Required</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-4 h-4 rounded bg-error-container"></div>
+<span class="font-body-md text-body-md text-on-surface-variant">Critical / Dry</span>
+</div>
+<div class="flex items-center gap-2">
+<div class="w-4 h-4 rounded bg-secondary-fixed"></div>
+<span class="font-body-md text-body-md text-on-surface-variant">Active Irrigation</span>
+</div>
+</div>
+</div>
+<!-- Side Overlay Panel (Zone 4 Details) -->
+<aside class="w-full md:w-[400px] h-full absolute right-0 top-0 md:relative z-30 glass-panel border-l border-white/50 flex flex-col p-6 shadow-[-10px_0_30px_rgba(0,0,0,0.05)] transform transition-transform duration-300">
+<div class="flex justify-between items-start mb-6">
+<div>
+<div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-error-container text-on-error-container mb-2">
+<span class="material-symbols-outlined text-[16px] fill-icon">warning</span>
+<span class="font-label-lg text-label-lg text-[12px]">Critical Alert</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-surface">Zone 4</h2>
+<p class="font-body-md text-body-md text-on-surface-variant">North-East Quadrant</p>
+</div>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-high transition-colors md:hidden">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<!-- Sensor Data Grid -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+<!-- Moisture Card -->
+<div class="bg-white/80 rounded-xl p-4 shadow-sm border border-error/20 flex flex-col gap-2">
+<div class="flex items-center gap-2 text-error">
+<span class="material-symbols-outlined">water_drop</span>
+<span class="font-label-lg text-label-lg">Moisture</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-display-lg text-display-lg text-error">12</span>
+<span class="font-body-md text-body-md text-on-surface-variant">%</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full mt-1">
+<div class="bg-error h-2 rounded-full" style="width: 12%"></div>
+</div>
+</div>
+<!-- Temp Card -->
+<div class="bg-white/80 rounded-xl p-4 shadow-sm border border-outline-variant flex flex-col gap-2">
+<div class="flex items-center gap-2 text-tertiary">
+<span class="material-symbols-outlined">device_thermostat</span>
+<span class="font-label-lg text-label-lg">Temp</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-display-lg text-display-lg text-on-surface">24</span>
+<span class="font-body-md text-body-md text-on-surface-variant">°C</span>
+</div>
+<div class="w-full bg-surface-container h-2 rounded-full mt-1">
+<div class="bg-tertiary-fixed-dim h-2 rounded-full" style="width: 60%"></div>
+</div>
+</div>
+</div>
+<!-- AI Insight -->
+<div class="bg-primary-container/10 rounded-xl p-4 mb-6 border border-primary-container/20">
+<div class="flex items-center gap-2 mb-2 text-primary">
+<span class="material-symbols-outlined fill-icon">psychology</span>
+<h4 class="font-label-lg text-label-lg">AI Recommendation</h4>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                    Soil moisture is critically low. Immediate irrigation recommended to prevent crop stress. Weather forecast shows no rain for the next 48 hours.
+                </p>
+</div>
+<!-- Actions -->
+<div class="mt-auto flex flex-col gap-3">
+<button class="w-full h-12 bg-secondary text-on-primary rounded-lg font-label-lg text-label-lg flex items-center justify-center gap-2 shadow-md hover:bg-secondary-container hover:text-on-secondary-container transition-colors active:scale-95 duration-150 min-h-[48px]">
+<span class="material-symbols-outlined fill-icon">water_drop</span>
+                    Start Irrigation
+                </button>
+<button class="w-full h-12 bg-surface-container border border-outline-variant text-on-surface rounded-lg font-label-lg text-label-lg flex items-center justify-center gap-2 hover:bg-surface-container-high transition-colors active:scale-95 duration-150 min-h-[48px]">
+<span class="material-symbols-outlined">history</span>
+                    View Zone History
+                </button>
+</div>
+</aside>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center h-20 bg-white dark:bg-slate-950 px-2 pb-safe border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_20px_rgba(46,125,50,0.1)]">
+<a class="flex flex-col items-center justify-center text-green-700 dark:text-green-400 font-bold bg-green-50 dark:bg-green-900/30 rounded-xl px-3 py-1 active:scale-90 transition-transform min-h-[48px] min-w-[48px]" href="#">
+<span class="material-symbols-outlined" data-icon="home" data-weight="fill" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[10px] font-medium font-sans mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-h-[48px] min-w-[48px]" href="#">
+<span class="material-symbols-outlined" data-icon="storefront">storefront</span>
+<span class="text-[10px] font-medium font-sans mt-1">Mandi</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-h-[48px] min-w-[48px]" href="#">
+<span class="material-symbols-outlined" data-icon="document_scanner">document_scanner</span>
+<span class="text-[10px] font-medium font-sans mt-1">Scanner</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-h-[48px] min-w-[48px]" href="#">
+<span class="material-symbols-outlined" data-icon="cloud">cloud</span>
+<span class="text-[10px] font-medium font-sans mt-1">Weather</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-h-[48px] min-w-[48px]" href="#">
+<span class="material-symbols-outlined" data-icon="warning">warning</span>
+<span class="text-[10px] font-medium font-sans mt-1">Alerts</span>
+</a>
+</nav>
+</body></html>

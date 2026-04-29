@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Chemical Substitute Finder</title>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Config -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary": "#00639a",
+                    "inverse-primary": "#88d982",
+                    "tertiary-fixed-dim": "#f8bd2a",
+                    "on-tertiary-fixed": "#261a00",
+                    "secondary-fixed": "#cee5ff",
+                    "on-surface": "#1a1c1c",
+                    "on-background": "#1a1c1c",
+                    "surface-bright": "#f9f9f9",
+                    "on-primary": "#ffffff",
+                    "tertiary": "#6e5100",
+                    "error-container": "#ffdad6",
+                    "inverse-on-surface": "#f0f1f1",
+                    "background": "#f9f9f9",
+                    "on-primary-fixed": "#002204",
+                    "on-secondary-container": "#00436a",
+                    "tertiary-fixed": "#ffdfa0",
+                    "on-secondary-fixed-variant": "#004a75",
+                    "surface": "#f9f9f9",
+                    "outline-variant": "#bfcaba",
+                    "primary-fixed": "#a3f69c",
+                    "error": "#ba1a1a",
+                    "on-tertiary-container": "#ffefd7",
+                    "surface-container-highest": "#e2e2e2",
+                    "on-primary-container": "#cbffc2",
+                    "on-error": "#ffffff",
+                    "surface-container": "#eeeeee",
+                    "primary-fixed-dim": "#88d982",
+                    "surface-container-high": "#e8e8e8",
+                    "primary-container": "#2e7d32",
+                    "surface-container-low": "#f3f3f3",
+                    "on-tertiary-fixed-variant": "#5c4300",
+                    "inverse-surface": "#2f3131",
+                    "primary": "#0d631b",
+                    "tertiary-container": "#8c6800",
+                    "on-secondary-fixed": "#001d32",
+                    "on-surface-variant": "#40493d",
+                    "on-tertiary": "#ffffff",
+                    "surface-variant": "#e2e2e2",
+                    "on-secondary": "#ffffff",
+                    "surface-tint": "#1b6d24",
+                    "secondary-fixed-dim": "#96ccff",
+                    "secondary-container": "#51b2fe",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#005312",
+                    "outline": "#707a6c",
+                    "surface-dim": "#dadada",
+                    "surface-container-lowest": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "unit": "8px",
+                    "card-padding": "24px",
+                    "container-margin": "24px",
+                    "touch-target-min": "48px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "hindi-body": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "hindi-body": ["18px", {"lineHeight": "30px", "fontWeight": "400"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "fontWeight": "600"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background antialiased min-h-screen flex flex-col font-body-md">
+<!-- TopAppBar Shared Component -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-white/70 backdrop-blur-xl border-b border-green-100 shadow-[0_4px_20px_rgba(46,125,50,0.15)]">
+<div class="flex items-center gap-3">
+<img alt="User profile avatar of a farmer smiling in daylight" class="w-10 h-10 rounded-full object-cover border-2 border-primary-container" data-alt="close up portrait of a rural indian farmer smiling with a sun hat on a bright day" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDh0Z73EdlIvYiBS0hXYvw3VH7UhU1kJ_6praF7bPW8fx7ZaRGqgB4l3Mql5UsNiR45Oqlo6KSeYoVE7h50YcZz_0KF5gNVA_BF8yUmCsCvWusOQCZvyaEldqQJTviRGCMAyW06j3w9ouhHVX381Qk0vWjT-K37HD20kOyMR-q9ZwIaxhBwO1Flyv6OsScSYjKe8kCtwlBlU6jXR-Zn6AKJJuB3tq6YQvg-f_mr3E5FvQQoin_YQqy592tGjhDk2AOwgeT0r9p12Q"/>
+<span class="text-lg font-bold text-green-700 font-headline-md tracking-tight">Nashik, MH</span>
+</div>
+<button aria-label="Notifications" class="w-touch-target-min h-touch-target-min flex items-center justify-center text-green-800 hover:bg-green-50 rounded-full transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-[24px]">notifications</span>
+</button>
+</header>
+<!-- Main Content Area -->
+<main class="flex-1 pt-[80px] pb-[100px] md:pb-8 max-w-7xl mx-auto w-full">
+<!-- Search Section -->
+<section class="px-container-margin py-unit">
+<div class="relative flex items-center h-[56px] bg-surface-container rounded-full px-4 shadow-sm border border-outline-variant/30 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20 transition-all">
+<span class="material-symbols-outlined text-outline mr-3 text-[24px]">search</span>
+<input class="flex-1 bg-transparent border-none outline-none text-body-lg font-body-lg text-on-surface placeholder:text-outline p-0 h-full w-full focus:ring-0" placeholder="Search chemical, brand, or crop issue..." type="text"/>
+<button class="w-10 h-10 flex items-center justify-center bg-primary-container text-on-primary rounded-full hover:bg-primary transition-colors ml-2">
+<span class="material-symbols-outlined text-[20px]">barcode_scanner</span>
+</button>
+</div>
+</section>
+<div class="grid grid-cols-1 md:grid-cols-12 gap-gutter px-container-margin py-unit">
+<!-- Current Product Column -->
+<section class="md:col-span-5 flex flex-col gap-unit">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-2">Analyzed Product</h2>
+<div class="bg-surface rounded-xl shadow-[0_4px_20px_rgba(46,125,50,0.15)] p-card-padding border border-outline-variant/20 flex flex-col gap-4">
+<!-- Header -->
+<div class="flex justify-between items-start">
+<div>
+<span class="inline-block bg-surface-variant text-on-surface-variant font-label-lg text-[12px] px-2 py-1 rounded-md mb-2 tracking-wider uppercase">Herbicide</span>
+<h3 class="font-headline-lg text-headline-lg text-on-surface leading-tight">GlyphoMax 41%</h3>
+<p class="font-body-md text-body-md text-outline mt-1">Systemic non-selective weed killer</p>
+</div>
+<div class="bg-error-container/20 text-error border border-error-container px-3 py-2 rounded-lg flex flex-col items-center justify-center">
+<span class="material-symbols-outlined text-[24px] mb-1">warning</span>
+<span class="font-label-lg text-[10px] uppercase">High Toxicity</span>
+</div>
+</div>
+<hr class="border-outline-variant/30"/>
+<!-- Composition Bento Grid -->
+<div class="grid grid-cols-2 gap-3">
+<div class="bg-surface-container-low p-4 rounded-lg flex flex-col justify-center">
+<span class="material-symbols-outlined text-tertiary mb-2">science</span>
+<p class="font-label-lg text-outline text-[12px] uppercase">Active Ingredient</p>
+<p class="font-body-lg text-on-surface font-semibold mt-1">Glyphosate 41% SL</p>
+</div>
+<div class="bg-surface-container-low p-4 rounded-lg flex flex-col justify-center">
+<span class="material-symbols-outlined text-secondary mb-2">water_drop</span>
+<p class="font-label-lg text-outline text-[12px] uppercase">Standard Dosage</p>
+<p class="font-body-lg text-on-surface font-semibold mt-1">800ml - 1L / Acre</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Suggested Substitutes Column -->
+<section class="md:col-span-7 flex flex-col gap-unit md:pl-4">
+<div class="flex justify-between items-end mb-2">
+<h2 class="font-headline-md text-headline-md text-on-surface">Suggested Alternatives</h2>
+<span class="font-label-lg text-primary cursor-pointer hover:underline">Filter</span>
+</div>
+<div class="flex flex-col gap-4">
+<!-- Substitute Card 1 (Best Match) -->
+<div class="bg-surface rounded-xl shadow-[0_4px_20px_rgba(46,125,50,0.15)] border border-primary/20 relative overflow-hidden flex flex-col">
+<!-- Match Badge -->
+<div class="absolute top-0 right-0 bg-primary-container text-on-primary-container font-label-lg text-[12px] px-4 py-1.5 rounded-bl-xl shadow-sm flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">verified</span> 98% Match
+                        </div>
+<div class="p-card-padding flex flex-col gap-4">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">EcoClear WeedMaster</h3>
+<p class="font-body-md text-body-md text-outline">Ammonium Salt of Glyphosate 71% SG</p>
+</div>
+<!-- Metrics Row -->
+<div class="grid grid-cols-3 gap-2 bg-surface-container-lowest rounded-lg border border-outline-variant/20 p-3">
+<div class="flex flex-col">
+<span class="font-label-lg text-outline text-[11px] uppercase mb-1">Price / L</span>
+<span class="font-body-md text-primary font-semibold flex items-center gap-1">
+                                        ₹450 <span class="text-[12px] text-primary-fixed-dim bg-primary/10 px-1 rounded">↓ 15%</span>
+</span>
+</div>
+<div class="flex flex-col border-l border-outline-variant/30 pl-3">
+<span class="font-label-lg text-outline text-[11px] uppercase mb-1">Efficacy</span>
+<span class="font-body-md text-on-surface flex items-center gap-1">
+                                        4.8 <span class="material-symbols-outlined text-tertiary-fixed-dim text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</span>
+</div>
+<div class="flex flex-col border-l border-outline-variant/30 pl-3">
+<span class="font-label-lg text-outline text-[11px] uppercase mb-1">Safety</span>
+<span class="font-body-md text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">eco</span> Safer
+                                    </span>
+</div>
+</div>
+<!-- Action Button -->
+<button class="w-full min-h-touch-target-min bg-secondary-container text-on-secondary-container rounded-lg font-label-lg text-label-lg flex items-center justify-center gap-2 hover:bg-secondary hover:text-on-secondary transition-all shadow-sm">
+<span class="material-symbols-outlined">storefront</span> Locate Nearest Store
+                            </button>
+</div>
+</div>
+<!-- Substitute Card 2 -->
+<div class="bg-surface rounded-xl shadow-sm border border-outline-variant/30 flex flex-col">
+<div class="p-card-padding flex flex-col gap-4">
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Paraquat Dichloride 24% SL</h3>
+<p class="font-body-md text-body-md text-outline">Contact Herbicide Alternative</p>
+</div>
+<span class="bg-surface-variant text-on-surface-variant font-label-lg text-[12px] px-2 py-1 rounded-md">85% Match</span>
+</div>
+<div class="grid grid-cols-3 gap-2 bg-surface-container-lowest rounded-lg border border-outline-variant/20 p-3">
+<div class="flex flex-col">
+<span class="font-label-lg text-outline text-[11px] uppercase mb-1">Price / L</span>
+<span class="font-body-md text-on-surface font-semibold flex items-center gap-1">
+                                        ₹520 <span class="text-[12px] text-outline">Similar</span>
+</span>
+</div>
+<div class="flex flex-col border-l border-outline-variant/30 pl-3">
+<span class="font-label-lg text-outline text-[11px] uppercase mb-1">Efficacy</span>
+<span class="font-body-md text-on-surface flex items-center gap-1">
+                                        4.5 <span class="material-symbols-outlined text-tertiary-fixed-dim text-[16px]" style="font-variation-settings: 'FILL' 1;">star</span>
+</span>
+</div>
+<div class="flex flex-col border-l border-outline-variant/30 pl-3">
+<span class="font-label-lg text-outline text-[11px] uppercase mb-1">Safety</span>
+<span class="font-body-md text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">warning</span> High Risk
+                                    </span>
+</div>
+</div>
+<button class="w-full min-h-touch-target-min bg-surface-container-highest text-on-surface rounded-lg font-label-lg text-label-lg flex items-center justify-center gap-2 hover:bg-surface-dim transition-colors">
+<span class="material-symbols-outlined">storefront</span> Check Availability
+                            </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- BottomNavBar Shared Component -->
+<nav class="fixed bottom-0 w-full z-50 flex justify-around items-center h-20 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(46,125,50,0.1)] px-2 pb-safe md:hidden">
+<button class="flex flex-col items-center justify-center text-slate-500 hover:text-green-600 w-16 h-full transition-transform active:scale-90">
+<span class="material-symbols-outlined mb-1 text-[24px]">home</span>
+<span class="text-[10px] font-medium font-sans">Home</span>
+</button>
+<!-- ACTIVE TAB: Mandi (Shopping/Finding Products) -->
+<button class="flex flex-col items-center justify-center text-green-700 font-bold bg-green-50 rounded-xl px-4 py-2 w-16 h-14 transition-transform active:scale-90 shadow-sm border border-green-100">
+<span class="material-symbols-outlined mb-1 text-[24px]" style="font-variation-settings: 'FILL' 1;">storefront</span>
+<span class="text-[10px] font-medium font-sans">Mandi</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-500 hover:text-green-600 w-16 h-full transition-transform active:scale-90">
+<span class="material-symbols-outlined mb-1 text-[24px]">document_scanner</span>
+<span class="text-[10px] font-medium font-sans">Scanner</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-500 hover:text-green-600 w-16 h-full transition-transform active:scale-90">
+<span class="material-symbols-outlined mb-1 text-[24px]">cloud</span>
+<span class="text-[10px] font-medium font-sans">Weather</span>
+</button>
+<button class="flex flex-col items-center justify-center text-slate-500 hover:text-green-600 w-16 h-full transition-transform active:scale-90">
+<span class="material-symbols-outlined mb-1 text-[24px]">warning</span>
+<span class="text-[10px] font-medium font-sans">Alerts</span>
+</button>
+</nav>
+</body></html>

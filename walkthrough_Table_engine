@@ -1,0 +1,167 @@
+# SmartAgri Crop Recommendation Engine — Architecture & Walkthrough
+
+## What Was Built
+
+A **production-grade, GPU-accelerated XGBoost training pipeline** for the SmartAgri Crop Recommendation Engine. It trains on `master_crop_dataset.csv` (68,290 rows × 14 features, ~22 crop classes) and produces a fully serialized model ready for live ESP32 sensor inference.
+
+---
+
+## Files Created
+
+| File | Purpose |
+|---|---|
+| `train_model.py` | 🧠 Full training pipeline (GPU + Optuna + CV + SHAP) |
+| `evaluate_model.py` | 🧪 Evaluation + ESP32 simulation + stress testing |
+| `requirements.txt` | 📦 All Python dependencies |
+| `install_and_train.bat` | ⚡ One-click Windows setup & launch |
+
+### After training, `model_artifacts/` will contain:
+| Artifact | Use |
+|---|---|
+| `xgb_crop_model.pkl` | joblib model (import in Python backend) |
+| `xgb_crop_model.json` | Native XGBoost format (fastest inference) |
+| `scaler.pkl` | StandardScaler (must apply before predict) |
+| `label_encoder.pkl` | Maps integer predictions → crop names |
+| `model_metadata.json` | Class list, metrics, hyperparams |
+| `classification_report.txt` | Full per-class precision/recall/F1 |
+| `confusion_matrix.png` | Visual confusion matrix |
+| `feature_importance.png` | XGBoost feature gain chart |
+| `shap_summary.png` | SHAP beeswarm plot (if shap installed) |
+| `per_class_accuracy.csv` | Per-crop accuracy CSV |
+
+---
+
+## Architecture Deep Dive
+
+```mermaid
+flowchart TD
+    A[master_crop_dataset.csv\n68,290 rows × 14 cols] --> B[load_and_validate\nClip outliers]
+    B --> C[Feature Engineering\n13 features]
+    C --> D[LabelEncoder\n~22 crops → integers]
+    D --> E[85/15 Stratified Split]
+    E --> F[StandardScaler]
+    F --> G[Optuna HPO\n150 Bayesian trials\n5-fold inner CV]
+    G --> H[Best Hyperparameters]
+    H --> I[10-Fold Stratified\nCross-Validation]
+    H --> J[Final Model Training\n+ Early Stopping]
+    J --> K[Test Evaluation\nTop-1/3/5 Accuracy\nF1 Macro/Weighted]
+    J --> L[SHAP Explainability]
+    J --> M[model_artifacts/]
+```
+
+### Key Design Decisions
+
+**1. GPU Filing Strategy**
+```python
+# Smart detection — no config change needed
+gpu_cfg = detect_gpu()
+# If NVIDIA GPU found:  {"tree_method": "hist", "device": "cuda"}
+# If CPU only:          {"tree_method": "hist", "device": "cpu", "n_jobs": N}
+```
+XGBoost 2.x uses `device="cuda"` (not the old `gpu_hist`). The code auto-detects via `nvidia-smi` and falls back transparently.
+
+**2. Optuna Bayesian Hyperparameter Optimisation**
+- 150 trials with TPE sampler
+- Searches: `n_estimators`, `learning_rate`, `max_depth`, `min_child_weight`, `subsample`, `colsample_bytree`, `colsample_bylevel`, `reg_alpha`, `reg_lambda`, `gamma`, `max_delta_step`
+- If Optuna not installed → falls back to strong hand-tuned defaults
+
+**3. 10-Fold Stratified Cross-Validation**
+- Runs on the full training split after HPO
+- Reports mean ± std accuracy across all folds
+- Ensures every crop class is represented in every fold
+
+**4. Early Stopping**
+- 10% of training data used as internal validation
+- `early_stopping_rounds=40` — stops if no improvement for 40 rounds
+- Prevents overfitting on any one class
+
+**5. Modular Backend Integration**
+The `preprocess_live_data()` function is the exact same in both `train_model.py` and `evaluate_model.py`. Import it directly in your FastAPI/Django view:
+```python
+from train_model import preprocess_live_data
+import joblib
+
+model  = joblib.load("model_artifacts/xgb_crop_model.pkl")
+scaler = joblib.load("model_artifacts/scaler.pkl")
+le     = joblib.load("model_artifacts/label_encoder.pkl")
+
+# ESP32 sends: {"N": 90, "P": 42, "K": 43, "Moisture": 82}
+X      = preprocess_live_data(esp32_payload)
+X_sc   = scaler.transform(X.values)
+pred   = le.inverse_transform(model.predict(X_sc))[0]   # e.g. "rice"
+```
+
+---
+
+## How to Start Training
+
+### Step 1 — Install dependencies
+```bat
+# Option A: One-click (recommended)
+install_and_train.bat
+
+# Option B: Manual
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+### Step 2 — Train the model
+```bat
+python train_model.py
+```
+
+**Expected output flow:**
+```
+✅  GPU detected: NVIDIA GeForce RTX ...     ← or CPU fallback
+📂  Loading dataset: master_crop_dataset.csv
+  Dataset shape  : (68290, 14)
+  Unique classes : 22
+🔍  Running Optuna HPO — 150 trials …
+  Best CV accuracy : 99.xxxx%
+📊  Running 10-Fold Stratified Cross-Validation …
+  CV Accuracy  : 99.xxxx% ± 0.xxxx%
+🚀  Training final model ...
+💾  All artifacts saved to ./model_artifacts/
+🎯  Final Test Accuracy : 99.xxxx%
+```
+
+> [!TIP]
+> If you want faster training during testing, reduce `OPTUNA_TRIALS = 30` and `CV_FOLDS = 5` at the top of `train_model.py`.
+
+### Step 3 — Evaluate & test
+```bat
+python evaluate_model.py
+```
+This will:
+- Show full accuracy report on the held-out `test.csv`
+- Simulate 5 live ESP32 sensor payloads end-to-end
+- Run 3 edge-case stress tests (zero inputs, max inputs, neutral)
+
+---
+
+## Expected Accuracy Range
+
+Based on the dataset characteristics (68K rows, well-separated agronomic features, 22 classes):
+
+| Metric | Expected Range |
+|---|---|
+| Top-1 Accuracy | **98.5 – 99.8 %** |
+| Top-3 Accuracy | **99.9 – 100 %** |
+| F1 Macro | **98 – 99.7 %** |
+| CV Mean | **98.5 – 99.6 %** |
+
+> [!NOTE]
+> The 13 engineered features (N_P_ratio, THI, water_availability, pH_stress, etc.) are the key reason for near-perfect accuracy. They encode agronomic domain knowledge that raw N/P/K values alone can't capture.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| `ModuleNotFoundError: No module named 'xgboost'` | Run `pip install -r requirements.txt` |
+| GPU not detected | Install CUDA drivers; code falls back to CPU automatically |
+| `FileNotFoundError: xgb_crop_model.pkl` | Run `train_model.py` before `evaluate_model.py` |
+| Optuna not found | `pip install optuna` — or code uses strong defaults automatically |
+| Out of memory on GPU | Reduce `n_estimators` in `_default_params()` |

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Crop &amp; Fertilizer Decision Engine</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary": "#00639a",
+                        "inverse-primary": "#88d982",
+                        "tertiary-fixed-dim": "#f8bd2a",
+                        "on-tertiary-fixed": "#261a00",
+                        "secondary-fixed": "#cee5ff",
+                        "on-surface": "#1a1c1c",
+                        "on-background": "#1a1c1c",
+                        "surface-bright": "#f9f9f9",
+                        "on-primary": "#ffffff",
+                        "tertiary": "#6e5100",
+                        "error-container": "#ffdad6",
+                        "inverse-on-surface": "#f0f1f1",
+                        "background": "#f9f9f9",
+                        "on-primary-fixed": "#002204",
+                        "on-secondary-container": "#00436a",
+                        "tertiary-fixed": "#ffdfa0",
+                        "on-secondary-fixed-variant": "#004a75",
+                        "surface": "#f9f9f9",
+                        "outline-variant": "#bfcaba",
+                        "primary-fixed": "#a3f69c",
+                        "error": "#ba1a1a",
+                        "on-tertiary-container": "#ffefd7",
+                        "surface-container-highest": "#e2e2e2",
+                        "on-primary-container": "#cbffc2",
+                        "on-error": "#ffffff",
+                        "surface-container": "#eeeeee",
+                        "primary-fixed-dim": "#88d982",
+                        "surface-container-high": "#e8e8e8",
+                        "primary-container": "#2e7d32",
+                        "surface-container-low": "#f3f3f3",
+                        "on-tertiary-fixed-variant": "#5c4300",
+                        "inverse-surface": "#2f3131",
+                        "primary": "#0d631b",
+                        "tertiary-container": "#8c6800",
+                        "on-secondary-fixed": "#001d32",
+                        "on-surface-variant": "#40493d",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#e2e2e2",
+                        "on-secondary": "#ffffff",
+                        "surface-tint": "#1b6d24",
+                        "secondary-fixed-dim": "#96ccff",
+                        "secondary-container": "#51b2fe",
+                        "on-error-container": "#93000a",
+                        "on-primary-fixed-variant": "#005312",
+                        "outline": "#707a6c",
+                        "surface-dim": "#dadada",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "gutter": "16px",
+                        "unit": "8px",
+                        "card-padding": "24px",
+                        "container-margin": "24px",
+                        "touch-target-min": "48px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Inter"],
+                        "label-lg": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "hindi-body": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "headline-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-lg": ["14px", { "lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "hindi-body": ["18px", { "lineHeight": "30px", "fontWeight": "400" }],
+                        "display-lg": ["48px", { "lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "600" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24 md:pb-0">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-4 h-16 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-b border-green-100 dark:border-slate-800 shadow-[0_4px_20px_rgba(46,125,50,0.15)]">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-primary-container overflow-hidden flex-shrink-0">
+<img alt="User Profile Avatar" class="w-full h-full object-cover" data-alt="close-up of a smiling farmer with a sun-weathered face, wearing a simple collared shirt, well-lit outdoors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAUTVGyNvKtQScAaASr2vJDD9rTP4v3H_Yi_242dkqJYdd8dSW8JSihf7XGJYS9G5miDUxd5P5Ztu99AUD6AqTDjwxM8eh9sYB3by0CGs3o6OkLWjWOY6SoIB_nRhYUXyfb_wYngCZYPTpv24tcyFfm7b52uz95PHajspTdhgPZkksONHbsWlYlbUjBTW9gQ0n8sWvUg0uTevTHUMETqhnNVVQ8fCHNEoPb5wpDKj51SLBATpxPuHjzxa2PP4nrpMTqj2mGyKNYfg"/>
+</div>
+<span class="text-lg font-bold text-green-700 dark:text-green-500 font-headline-md text-headline-md">Nashik, MH</span>
+</div>
+<button class="w-10 h-10 rounded-full flex items-center justify-center hover:bg-green-50 dark:hover:bg-slate-800 transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-green-800 dark:text-green-400">notifications</span>
+</button>
+</header>
+<!-- Main Canvas -->
+<main class="pt-20 px-4 md:px-8 max-w-7xl mx-auto space-y-6">
+<!-- Header Section -->
+<div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 pb-2 border-b border-surface-variant">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-primary">Crop &amp; Fertilizer Engine</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant mt-1">AI-driven recommendations based on real-time soil data.</p>
+</div>
+<button class="bg-secondary text-on-primary px-6 py-3 rounded-full font-label-lg text-label-lg flex items-center gap-2 hover:bg-secondary-container hover:text-on-secondary-container transition-colors shadow-sm min-h-[48px]">
+<span class="material-symbols-outlined">download</span>
+                Export Report
+            </button>
+</div>
+<!-- AI Recommendation Hero Card (Glassmorphism) -->
+<section class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary-container to-primary text-on-primary shadow-[0_4px_20px_rgba(46,125,50,0.2)]">
+<!-- Decorative Background Image -->
+<div class="absolute inset-0 opacity-20 bg-cover bg-center mix-blend-overlay" data-alt="golden wheat field ready for harvest under a bright blue sky, sunlight reflecting off the stalks" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCZ67nscirS3m21knHzmiZVZdGSGUlFsK8vJaBLNEO9KlEjJ-0tjOgi7FCsCNcXy1VYlMSIR6G9lHHMQ2Tsx1j8Z_D6krkMxAotT8yjgN434U47cUz2pttQz8IZUYE8mM7vkHXwxNeOyyjLTFG8WTl0B42pho0YacKSRszh6CIAb8kWJ_Ms7NTZhpgmVZnBiQU5EUcwION4BewXAWe442om1P-H07QXUfmFP8kdcZ9SoGeX9bbY1AofuUQ1YcuJViBEWKdn8518Og');"></div>
+<div class="relative z-10 p-card-padding flex flex-col md:flex-row items-center gap-8 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl m-1">
+<div class="flex-1 space-y-4 text-center md:text-left">
+<div class="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full font-label-lg text-label-lg backdrop-blur-sm border border-white/30">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+                        AI Recommended
+                    </div>
+<h2 class="font-display-lg text-display-lg">Best Crop for Your Soil: <span class="text-tertiary-fixed">Wheat</span></h2>
+<p class="font-body-lg text-body-lg opacity-90 max-w-2xl">Based on your recent soil test, historical weather patterns, and current market demand, Wheat offers the highest probability of success and profitability for this season.</p>
+</div>
+<!-- Confidence Score -->
+<div class="flex-shrink-0 flex flex-col items-center justify-center p-6 bg-white/10 backdrop-blur-xl rounded-full border border-white/20 w-40 h-40 shadow-inner">
+<span class="font-display-lg text-display-lg text-primary-fixed">94%</span>
+<span class="font-label-lg text-label-lg opacity-80 mt-1">Confidence Score</span>
+</div>
+</div>
+</section>
+<!-- Bento Grid Layout -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+<!-- 'Why Wheat?' Card -->
+<div class="md:col-span-8 bg-surface rounded-xl p-card-padding shadow-[0_4px_20px_rgba(46,125,50,0.05)] border border-surface-variant flex flex-col">
+<div class="flex items-center gap-3 mb-4 border-b border-surface-variant pb-4">
+<span class="material-symbols-outlined text-primary text-[28px]">eco</span>
+<h3 class="font-headline-md text-headline-md text-on-surface">Why Wheat?</h3>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-6 flex-grow">
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg text-on-surface-variant">Soil Moisture Match</span>
+<span class="font-label-lg text-label-lg text-primary">Excellent</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-2">
+<div class="bg-primary rounded-full h-2 w-[90%]"></div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Current soil moisture is at 65%, ideal for the early sowing stages of wheat. Expected rainfall aligns well with critical growth phases.</p>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg text-on-surface-variant">NPK Balance</span>
+<span class="font-label-lg text-label-lg text-primary">Optimal</span>
+</div>
+<div class="w-full bg-surface-variant rounded-full h-2">
+<div class="bg-primary rounded-full h-2 w-[85%]"></div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mt-2">Nitrogen levels are slightly low, but Phosphorus and Potassium are perfectly balanced for strong root development in wheat.</p>
+</div>
+</div>
+</div>
+<!-- Soil Test Summary Card -->
+<div class="md:col-span-4 bg-surface rounded-xl p-card-padding shadow-[0_4px_20px_rgba(46,125,50,0.05)] border border-surface-variant flex flex-col relative overflow-hidden">
+<!-- Subtle background pattern -->
+<div class="absolute -right-10 -top-10 opacity-5">
+<span class="material-symbols-outlined text-[150px]">science</span>
+</div>
+<div class="flex items-center justify-between mb-6 relative z-10">
+<h3 class="font-headline-md text-headline-md text-on-surface">Soil Summary</h3>
+<span class="font-label-lg text-label-lg text-on-surface-variant">Tested: 2 days ago</span>
+</div>
+<ul class="space-y-4 relative z-10 flex-grow">
+<li class="flex justify-between items-center bg-surface-container-low p-3 rounded-lg">
+<span class="font-body-lg text-body-lg text-on-surface">pH Level</span>
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg text-on-surface">6.8</span>
+<div class="w-3 h-3 rounded-full bg-primary" title="Optimal"></div>
+</div>
+</li>
+<li class="flex justify-between items-center bg-surface-container-low p-3 rounded-lg">
+<span class="font-body-lg text-body-lg text-on-surface">Nitrogen (N)</span>
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg text-on-surface">120 kg/ha</span>
+<div class="w-3 h-3 rounded-full bg-tertiary-fixed-dim" title="Attention"></div>
+</div>
+</li>
+<li class="flex justify-between items-center bg-surface-container-low p-3 rounded-lg">
+<span class="font-body-lg text-body-lg text-on-surface">Phosphorus (P)</span>
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg text-on-surface">45 kg/ha</span>
+<div class="w-3 h-3 rounded-full bg-primary" title="Optimal"></div>
+</div>
+</li>
+<li class="flex justify-between items-center bg-surface-container-low p-3 rounded-lg">
+<span class="font-body-lg text-body-lg text-on-surface">Potassium (K)</span>
+<div class="flex items-center gap-2">
+<span class="font-label-lg text-label-lg text-on-surface">210 kg/ha</span>
+<div class="w-3 h-3 rounded-full bg-primary" title="Optimal"></div>
+</div>
+</li>
+</ul>
+</div>
+<!-- Fertilizer Breakdown Section -->
+<div class="md:col-span-12 bg-surface rounded-xl p-card-padding shadow-[0_4px_20px_rgba(46,125,50,0.05)] border border-surface-variant">
+<div class="flex items-center gap-3 mb-6 border-b border-surface-variant pb-4">
+<span class="material-symbols-outlined text-secondary text-[28px]">vaccines</span>
+<h3 class="font-headline-md text-headline-md text-on-surface">Fertilizer Breakdown (per acre)</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Urea Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col items-center text-center">
+<div class="w-16 h-16 bg-secondary-fixed rounded-full flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-on-secondary-fixed text-[32px]">experiment</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">Urea</h4>
+<span class="font-display-lg text-display-lg text-secondary mb-2">50 <span class="text-body-lg font-body-lg">kg</span></span>
+<p class="font-body-md text-body-md text-on-surface-variant">Apply in split doses: 25kg at sowing, 25kg at 30 days.</p>
+</div>
+<!-- DAP Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col items-center text-center">
+<div class="w-16 h-16 bg-primary-fixed rounded-full flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-on-primary-fixed text-[32px]">science</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">DAP</h4>
+<span class="font-display-lg text-display-lg text-primary mb-2">30 <span class="text-body-lg font-body-lg">kg</span></span>
+<p class="font-body-md text-body-md text-on-surface-variant">Apply full dose basally at the time of sowing.</p>
+</div>
+<!-- MOP Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-lg p-4 flex flex-col items-center text-center">
+<div class="w-16 h-16 bg-tertiary-fixed rounded-full flex items-center justify-center mb-4">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-[32px]">view_in_ar</span>
+</div>
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">MOP</h4>
+<span class="font-display-lg text-display-lg text-tertiary mb-2">20 <span class="text-body-lg font-body-lg">kg</span></span>
+<p class="font-body-md text-body-md text-on-surface-variant">Apply full dose basally at the time of sowing.</p>
+</div>
+</div>
+</div>
+<!-- Alternative Crops Comparison -->
+<div class="md:col-span-12">
+<h3 class="font-headline-md text-headline-md text-on-surface mb-4">Alternative Crop Comparisons</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Gram Alternative -->
+<div class="bg-surface rounded-xl p-card-padding shadow-[0_4px_20px_rgba(46,125,50,0.05)] border border-surface-variant flex items-center gap-6">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 relative">
+<img alt="Chickpeas/Gram growing in field" class="w-full h-full object-cover" data-alt="close up of green chickpea plants growing in a dry field under bright sunlight" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBnU7UA6PLd9bEI_69th2WhRvsSjUYAXVLkCTAV6WHxjBlrt1K6vfQEWIaynqhm2Vlom7m5hHfjYCUGdm6T8M0ecdGAhdvJN1j-rYvXI93gJwZT44ufk9GiD2Z7gmgb-OoNjjv37P0lv423aoNDhGMIaZSd_cXlWEwNBI9VSyZjHdfX04ByEzwSSTASOKERR4uQ1FdKsjE_BwUeoNGrME0IKaFwxVIjzVweYQxOT30n-mf7zMs2zX_ohV0kdINqcRxTb7124ll0Fw"/>
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+<span class="font-headline-md text-headline-md text-white font-bold">78%</span>
+</div>
+</div>
+<div class="flex-grow">
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">Gram (Chickpea)</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mb-2">Requires less water, but lower market price expected this season.</p>
+<div class="flex items-center gap-2">
+<span class="bg-surface-container-high px-2 py-1 rounded text-[12px] font-semibold text-on-surface">Low Water Need</span>
+<span class="bg-error-container text-on-error-container px-2 py-1 rounded text-[12px] font-semibold">Lower Profit</span>
+</div>
+</div>
+</div>
+<!-- Mustard Alternative -->
+<div class="bg-surface rounded-xl p-card-padding shadow-[0_4px_20px_rgba(46,125,50,0.05)] border border-surface-variant flex items-center gap-6">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 relative">
+<img alt="Yellow mustard field" class="w-full h-full object-cover" data-alt="vibrant yellow mustard flowers blooming in a large agricultural field against a clear sky" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVo8kJVKXGaDGp7wAbq5gHFI2vcDhbx_nbwlt25Xr3LUf4aVmEXLW_BPhUcLe4fsss4VCdImU9L3sNubtEoAv9qMFQiddTeR8fuaBX2JISPPo2A5oMQfWpJU4kJO1IyAlmK8VZ7M1VXxSHOzg60HtBQMQiNJ6lhGa3j-Ao32ixbV7IQuQqfJ1_xAPiLY-t461gWi8zk8Uu_XoCqfgU46gZTlmIfjdwDtShKpMt0HnKttfxmCRJJkp4E7ksz0oEqrkNlbXziUNeDQ"/>
+<div class="absolute inset-0 bg-black/30 flex items-center justify-center">
+<span class="font-headline-md text-headline-md text-white font-bold">65%</span>
+</div>
+</div>
+<div class="flex-grow">
+<h4 class="font-headline-md text-headline-md text-on-surface mb-1">Mustard</h4>
+<p class="font-body-md text-body-md text-on-surface-variant mb-2">Soil nitrogen levels are currently too low for optimal yield without heavy intervention.</p>
+<div class="flex items-center gap-2">
+<span class="bg-surface-container-high px-2 py-1 rounded text-[12px] font-semibold text-on-surface">High Demand</span>
+<span class="bg-tertiary-fixed text-on-tertiary-fixed px-2 py-1 rounded text-[12px] font-semibold">High Fertilizer Need</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 w-full z-50 flex justify-around items-center h-20 bg-white dark:bg-slate-950 px-2 pb-safe border-t border-slate-100 dark:border-slate-800 shadow-[0_-4px_20px_rgba(46,125,50,0.1)]">
+<!-- Home - Active -->
+<a class="flex flex-col items-center justify-center text-green-700 dark:text-green-400 font-bold bg-green-50 dark:bg-green-900/30 rounded-xl px-3 py-1 min-w-[64px] min-h-[48px]" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-[10px] font-medium font-sans mt-1">Home</span>
+</a>
+<!-- Mandi - Inactive -->
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-w-[64px] min-h-[48px]" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<span class="text-[10px] font-medium font-sans mt-1">Mandi</span>
+</a>
+<!-- Scanner - Inactive -->
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-w-[64px] min-h-[48px]" href="#">
+<span class="material-symbols-outlined">document_scanner</span>
+<span class="text-[10px] font-medium font-sans mt-1">Scanner</span>
+</a>
+<!-- Weather - Inactive -->
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-w-[64px] min-h-[48px]" href="#">
+<span class="material-symbols-outlined">cloud</span>
+<span class="text-[10px] font-medium font-sans mt-1">Weather</span>
+</a>
+<!-- Alerts - Inactive -->
+<a class="flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 hover:text-green-600 dark:hover:text-green-300 active:scale-90 transition-transform min-w-[64px] min-h-[48px]" href="#">
+<span class="material-symbols-outlined">warning</span>
+<span class="text-[10px] font-medium font-sans mt-1">Alerts</span>
+</a>
+</nav>
+</body></html>

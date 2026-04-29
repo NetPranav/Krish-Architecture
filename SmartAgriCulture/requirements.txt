@@ -1,0 +1,33 @@
+# ╔══════════════════════════════════════════════════════╗
+# ║  SmartAgri · Crop Recommendation Engine              ║
+# ║  Python Dependencies                                 ║
+# ╚══════════════════════════════════════════════════════╝
+
+# Core ML
+xgboost>=2.0.0          # GPU support via tree_method='hist', device='cuda'
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Hyperparameter Optimisation (Bayesian)
+optuna>=3.6.0
+
+# Model serialization
+joblib>=1.4.0
+
+# Visualisation
+matplotlib>=3.8.0
+seaborn>=0.13.0
+
+# Explainability (optional but recommended)
+shap>=0.45.0
+
+# Utilities
+tqdm>=4.66.0
+
+# ── Vision API (Leaf Disease Detection) ──────────────
+httpx>=0.27.0               # HTTP client for Roboflow API (replaces inference-sdk for Py3.13 compat)
+fastapi>=0.115.0            # API framework
+uvicorn[standard]>=0.30.0   # ASGI server for FastAPI
+python-multipart>=0.0.9     # Required for FastAPI file uploads
+python-dotenv>=1.0.0        # Loads .env for API keys

@@ -1,0 +1,102 @@
+{
+  "features": [
+    "Current_Crop",
+    "Recommended_Crop",
+    "Soil_Type",
+    "Days_Since_Planting",
+    "N",
+    "P",
+    "K",
+    "temperature",
+    "humidity",
+    "ph",
+    "rainfall",
+    "N_P_ratio",
+    "N_K_ratio",
+    "P_K_ratio",
+    "THI",
+    "water_availability",
+    "pH_stress"
+  ],
+  "targets": [
+    "Deficit_N",
+    "Deficit_P",
+    "Deficit_K",
+    "Soil_Health_Score",
+    "Water_Requirement_Index",
+    "pH_Adjustment_Required",
+    "Temperature_Stress_Score",
+    "Fertilizer_Urgency_Score",
+    "Planting_Readiness_Score"
+  ],
+  "categorical": [
+    "Current_Crop",
+    "Recommended_Crop",
+    "Soil_Type"
+  ],
+  "numeric": [
+    "Days_Since_Planting",
+    "N",
+    "P",
+    "K",
+    "temperature",
+    "humidity",
+    "ph",
+    "rainfall",
+    "N_P_ratio",
+    "N_K_ratio",
+    "P_K_ratio",
+    "THI",
+    "water_availability",
+    "pH_stress"
+  ],
+  "test_metrics": {
+    "Deficit_N": {
+      "MAE": 0.2616,
+      "RMSE": 0.9233,
+      "R2": 0.8416
+    },
+    "Deficit_P": {
+      "MAE": 0.2122,
+      "RMSE": 0.5907,
+      "R2": 0.9971
+    },
+    "Deficit_K": {
+      "MAE": 0.0647,
+      "RMSE": 0.219,
+      "R2": 0.7865
+    },
+    "Soil_Health_Score": {
+      "MAE": 1.3897,
+      "RMSE": 1.842,
+      "R2": 0.9834
+    },
+    "Water_Requirement_Index": {
+      "MAE": 0.3512,
+      "RMSE": 2.2668,
+      "R2": 0.8951
+    },
+    "pH_Adjustment_Required": {
+      "MAE": 0.1187,
+      "RMSE": 0.337,
+      "R2": 0.9459
+    },
+    "Temperature_Stress_Score": {
+      "MAE": 1.5829,
+      "RMSE": 5.2934,
+      "R2": 0.9284
+    },
+    "Fertilizer_Urgency_Score": {
+      "MAE": 1.2169,
+      "RMSE": 3.0393,
+      "R2": 0.9892
+    },
+    "Planting_Readiness_Score": {
+      "MAE": 1.3897,
+      "RMSE": 1.842,
+      "R2": 0.9834
+    }
+  },
+  "test_size": 0.2,
+  "trained_at": "2026-04-29T22:02:05"
+}
