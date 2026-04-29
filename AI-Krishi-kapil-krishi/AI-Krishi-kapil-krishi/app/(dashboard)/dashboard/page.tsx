@@ -1,18 +1,44 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import TopBar from '@/app/components/ui/TopBar';
 import StatusBanner from '@/app/components/ui/StatusBanner';
+import { getDashboard, controlPump } from '@/app/lib/api';
 
-const actions = [
-  { id: 1, text: 'Inspect Plot A for pests', done: false },
-  { id: 2, text: 'Apply fertilizer to Plot C', done: true },
-  { id: 3, text: 'Check drip lines in greenhouse', done: false },
-];
+// Fallback data when backend is unreachable
+const FALLBACK = {
+  weather: { temperature: 28, description: 'Partly Cloudy', rain_probability: 10, location: 'Nashik, MH' },
+  moisture: { value: 42, status: 'normal' },
+  market: { commodity: 'Soybeans', price: 4200, unit: '₹/qtl', change_pct: 1.2 },
+  alerts: [{ title: 'Watering due tomorrow', desc: 'Plot B - Tomatoes', severity: 'warning' }],
+  actions: [
+    { id: 1, text: 'Inspect Plot A for pests', done: false },
+    { id: 2, text: 'Apply fertilizer to Plot C', done: true },
+    { id: 3, text: 'Check drip lines in greenhouse', done: false },
+  ],
+  ai_insight: { title: 'Optimal Irrigation Window', text: 'Moisture dropping in Plot B. Turning on pump now will save 15% water.' },
+};
 
 export default function HomePage() {
-  const [todoList, setTodoList] = useState(actions);
+  const [data, setData] = useState<any>(null);
+  const [todoList, setTodoList] = useState(FALLBACK.actions);
+  const [loading, setLoading] = useState(true);
+  const [pumpLoading, setPumpLoading] = useState(false);
+
+  useEffect(() => {
+    getDashboard()
+      .then((res) => {
+        if (res) {
+          setData(res);
+          if (res.actions) setTodoList(res.actions);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const d = data || FALLBACK;
 
   const toggleAction = (id: number) => {
     setTodoList((prev) =>
@@ -20,9 +46,20 @@ export default function HomePage() {
     );
   };
 
+  const handlePump = async () => {
+    setPumpLoading(true);
+    try {
+      await controlPump('start');
+    } catch {}
+    setPumpLoading(false);
+  };
+
   return (
     <div className="dashboard-page">
-      <TopBar location="Nashik, MH" weather="28°C, Partly Cloudy" />
+      <TopBar
+        location={d.weather?.location || 'Nashik, MH'}
+        weather={`${d.weather?.temperature || 28}°C, ${d.weather?.description || 'Partly Cloudy'}`}
+      />
 
       {/* Field Status Banner */}
       <StatusBanner
@@ -48,8 +85,8 @@ export default function HomePage() {
             </svg>
             <span className="metric-label" style={{ color: 'var(--green-800)' }}>Weather</span>
           </div>
-          <p className="metric-value">28°C</p>
-          <p className="metric-sub">Rain: 10%</p>
+          <p className="metric-value">{d.weather?.temperature || 28}°C</p>
+          <p className="metric-sub">Rain: {d.weather?.rain_probability || 10}%</p>
         </Link>
 
         <div className="metric-card">
@@ -59,39 +96,70 @@ export default function HomePage() {
             </svg>
             <span className="metric-label" style={{ color: '#1565C0' }}>Moisture</span>
           </div>
-          <p className="metric-value">42%</p>
+          <p className="metric-value">{d.moisture?.value || 42}%</p>
           <div className="moisture-bar">
-            <div className="moisture-fill" style={{ width: '42%' }} />
+            <div className="moisture-fill" style={{ width: `${d.moisture?.value || 42}%` }} />
           </div>
         </div>
       </div>
 
-      {/* Soybeans Price + Crop Alert */}
+      {/* Market Price + Crop Alert */}
       <div className="metric-grid">
-        <div className="metric-card">
+        <Link href="/mandi" className="metric-card">
           <div className="metric-card-header">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="1" x2="12" y2="23" />
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
-            <span className="metric-label" style={{ color: 'var(--green-800)' }}>Soybeans</span>
+            <span className="metric-label" style={{ color: 'var(--green-800)' }}>{d.market?.commodity || 'Soybeans'}</span>
           </div>
-          <p className="metric-value">₹4,200/qtl</p>
-          <p className="metric-sub metric-positive">📈 +1.2%</p>
-        </div>
+          <p className="metric-value">₹{(d.market?.price || 4200).toLocaleString()}/qtl</p>
+          <p className={`metric-sub ${(d.market?.change_pct || 0) >= 0 ? 'metric-positive' : 'metric-negative'}`}>
+            {(d.market?.change_pct || 0) >= 0 ? '📈' : '📉'} {d.market?.change_pct > 0 ? '+' : ''}{d.market?.change_pct || 1.2}%
+          </p>
+        </Link>
 
-        <div className="metric-card metric-card--alert">
+        <Link href="/alerts" className="metric-card metric-card--alert">
           <div className="metric-card-header">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C62828" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
               <line x1="12" y1="9" x2="12" y2="13" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
-            <span className="metric-label" style={{ color: '#C62828' }}>Crop Alert</span>
+            <span className="metric-label" style={{ color: '#C62828' }}>
+              {d.alerts_count ? `${d.alerts_count} Alerts` : 'Crop Alert'}
+            </span>
           </div>
-          <p className="metric-alert-title">Watering due tomorrow</p>
-          <p className="metric-sub">Plot B - Tomatoes</p>
-        </div>
+          <p className="metric-alert-title">{d.alerts?.[0]?.title || 'Watering due tomorrow'}</p>
+          <p className="metric-sub">{d.alerts?.[0]?.desc || 'Plot B - Tomatoes'}</p>
+        </Link>
+      </div>
+
+      {/* Quick Tools */}
+      <div className="metric-grid" style={{ marginBottom: 20 }}>
+        <Link href="/scanner/capture" className="metric-card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
+          <div style={{ background: '#E8F5E9', padding: 12, borderRadius: 12, color: '#2E7D32' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+          </div>
+          <div>
+            <p className="metric-label" style={{ fontSize: 14, color: '#1B5E20' }}>Scan Crop</p>
+            <p style={{ fontSize: 11, color: '#666', marginTop: 2 }}>Detect disease</p>
+          </div>
+        </Link>
+        <Link href="/scanner/capture" className="metric-card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 16 }}>
+          <div style={{ background: '#FFF8E1', padding: 12, borderRadius: 12, color: '#F9A825' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </div>
+          <div>
+            <p className="metric-label" style={{ fontSize: 14, color: '#F9A825' }}>Check Soil</p>
+            <p style={{ fontSize: 11, color: '#666', marginTop: 2 }}>Analyze soil type</p>
+          </div>
+        </Link>
       </div>
 
       {/* Today's Actions */}
@@ -131,25 +199,31 @@ export default function HomePage() {
           </svg>
           AI INSIGHT
         </div>
-        <h3 className="ai-insight-title">Optimal Irrigation Window</h3>
-        <p className="ai-insight-text">
-          Moisture dropping in Plot B. Turning on pump now will save 15% water and ensure deep root penetration.
-        </p>
-        <button className="btn-action" id="btn-turn-pump">
+        <h3 className="ai-insight-title">{d.ai_insight?.title || 'Optimal Irrigation Window'}</h3>
+        <p className="ai-insight-text">{d.ai_insight?.text || 'Moisture dropping in Plot B.'}</p>
+        <button className="btn-action" id="btn-turn-pump" onClick={handlePump} disabled={pumpLoading}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
             <polyline points="12 6 12 12 16 14" />
           </svg>
-          Turn on Pump
+          {pumpLoading ? 'Starting...' : 'Turn on Pump'}
         </button>
       </div>
 
       {/* FAB Chat button */}
-      <button className="fab-chat" aria-label="AI Chat" id="btn-ai-chat">
+      <Link href="/mitra" className="fab-chat" aria-label="AI Chat" id="btn-ai-chat">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
-      </button>
+      </Link>
+
+      {/* Live data indicator */}
+      {data && (
+        <div className="live-indicator">
+          <span className="live-dot" />
+          Live from backend
+        </div>
+      )}
     </div>
   );
 }

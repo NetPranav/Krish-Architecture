@@ -102,7 +102,9 @@ export default function ScannerCapturePage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<ScanState>('idle');
+  const [scanMode, setScanMode] = useState<'leaf' | 'field'>('leaf');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [flashOn, setFlashOn] = useState(false);
 
@@ -120,6 +122,7 @@ export default function ScannerCapturePage() {
 
     const url = URL.createObjectURL(file);
     setImageUrl(url);
+    setSelectedFile(file);
     setState('preview');
   }, []);
 
@@ -133,35 +136,61 @@ export default function ScannerCapturePage() {
     [handleFile]
   );
 
-  const startAnalysis = useCallback(() => {
-    if (!imageUrl) return;
+  const startAnalysis = useCallback(async () => {
+    if (!selectedFile) return;
 
     setState('scanning');
 
-    const img = new window.Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      // Add realistic delay for analysis feel
-      setTimeout(() => {
-        const analysis = analyzeImageForPlant(img);
+    try {
+      const { scanLeaf } = await import('@/app/lib/api');
+      const res = await scanLeaf(selectedFile);
+      
+      if (res?.disease) {
+        const analysis: AnalysisResult = {
+          isPlant: true,
+          confidence: res.confidence ? Math.round(res.confidence * 100) : 95,
+          leafType: res.disease,
+          leafTypeHi: res.disease_hi || res.disease,
+        };
+        // Store for result page
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('scanResult', JSON.stringify({
+            disease: res.disease,
+            disease_hi: res.disease_hi,
+            confidence: res.confidence,
+            treatment: res.treatment
+          }));
+        }
         setResult(analysis);
-        setState(analysis.isPlant ? 'success' : 'error');
-      }, 2000);
-    };
-    img.onerror = () => {
-      setState('error');
-      setResult({
-        isPlant: false,
-        confidence: 0,
-        error: 'Failed to process image. Please try again.',
-      });
-    };
-    img.src = imageUrl;
-  }, [imageUrl]);
+        setState('success');
+      } else {
+        // Fallback to client-side if backend returns no disease info but succeeds
+        throw new Error('Fallback');
+      }
+    } catch (err) {
+      console.warn("Backend API failed, using fallback client-side analysis");
+      if (!imageUrl) return;
+      const img = new window.Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        setTimeout(() => {
+          const analysis = analyzeImageForPlant(img);
+          setResult(analysis);
+          setState(analysis.isPlant ? 'success' : 'error');
+        }, 1500);
+      };
+      img.onerror = () => {
+        setState('error');
+        setResult({ isPlant: false, confidence: 0, error: 'Failed to process image.' });
+      };
+      img.src = imageUrl;
+    }
+  }, [selectedFile, imageUrl]);
 
   const reset = useCallback(() => {
     if (imageUrl) URL.revokeObjectURL(imageUrl);
     setImageUrl(null);
+    setSelectedFile(null);
     setResult(null);
     setState('idle');
   }, [imageUrl]);
@@ -236,6 +265,24 @@ export default function ScannerCapturePage() {
               )}
             </svg>
           </button>
+          
+          {state === 'idle' && (
+            <div style={{ background: 'rgba(0,0,0,0.6)', borderRadius: '24px', padding: '4px', display: 'flex', gap: '4px', position: 'absolute', left: '50%', transform: 'translateX(-50%)' }}>
+              <button 
+                onClick={() => setScanMode('leaf')}
+                style={{ padding: '8px 16px', borderRadius: '20px', border: 'none', background: scanMode === 'leaf' ? '#4CAF50' : 'transparent', color: scanMode === 'leaf' ? '#fff' : '#ccc', fontSize: '14px', fontWeight: 600, transition: '0.2s' }}
+              >
+                Scan Leaf
+              </button>
+              <button 
+                onClick={() => setScanMode('field')}
+                style={{ padding: '8px 16px', borderRadius: '20px', border: 'none', background: scanMode === 'field' ? '#4CAF50' : 'transparent', color: scanMode === 'field' ? '#fff' : '#ccc', fontSize: '14px', fontWeight: 600, transition: '0.2s' }}
+              >
+                Scan Field
+              </button>
+            </div>
+          )}
+
           {state === 'idle' && (
             <button
               className={`scanner-circle-btn ${flashOn ? 'scanner-circle-btn--active' : ''}`}

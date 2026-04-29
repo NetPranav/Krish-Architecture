@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '@/app/components/ui/TopBar';
+import { getIrrigationStatus, controlPump } from '@/app/lib/api';
 
 const waterUsage = [
   { day: 'M', value: 35 },
@@ -17,10 +18,24 @@ const waterUsage = [
 export default function IrrigationHubPage() {
   const router = useRouter();
   const [pumpRunning, setPumpRunning] = useState(false);
+  const [status, setStatus] = useState<any>(null);
 
-  const handlePump = () => {
+  useEffect(() => {
+    getIrrigationStatus().then(res => {
+      if (res?.optimal_window) {
+        setStatus(res);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const handlePump = async () => {
     setPumpRunning(true);
-    setTimeout(() => setPumpRunning(false), 5000);
+    try {
+      await controlPump('start');
+      setTimeout(() => setPumpRunning(false), 5000); // UI reset after 5s for demo
+    } catch {
+      setTimeout(() => setPumpRunning(false), 5000);
+    }
   };
 
   return (
@@ -40,9 +55,9 @@ export default function IrrigationHubPage() {
             </svg>
           </div>
           <div>
-            <h2 className="irr-window-title">Optimal Watering Window</h2>
+            <h2 className="irr-window-title">{status?.optimal_window?.title || 'Optimal Watering Window'}</h2>
             <p className="irr-window-text">
-              Soil moisture in Zone A is dropping. Rain is not expected for the next 48 hours. Recommended action: Run pump for 2 hours.
+              {status?.optimal_window?.reason || 'Soil moisture in Zone A is dropping. Rain is not expected for the next 48 hours. Recommended action: Run pump for 2 hours.'}
             </p>
           </div>
         </div>

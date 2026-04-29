@@ -54,6 +54,16 @@ export async function getProfile() {
   return apiFetch("/api/profile");
 }
 
+export async function updateProfile(data: { land_size?: string, land_unit?: string, soil_type?: string, voice_assistance?: boolean, language?: string }) {
+  const form = new FormData();
+  if (data.land_size) form.append("land_size", data.land_size);
+  if (data.land_unit) form.append("land_unit", data.land_unit);
+  if (data.soil_type) form.append("soil_type", data.soil_type);
+  if (data.voice_assistance !== undefined) form.append("voice_assistance", String(data.voice_assistance));
+  if (data.language) form.append("language", data.language);
+  return apiFetch("/api/profile", { method: "PUT", body: form });
+}
+
 // ── Weather ──────────────────────────────────────────────────────
 export async function getWeatherCurrent(lat = 20.0063, lon = 73.7895) {
   return apiFetch(`/api/weather/current?lat=${lat}&lon=${lon}`);
@@ -108,4 +118,11 @@ export async function controlPump(action: "start" | "stop") {
   const form = new FormData();
   form.append("action", action);
   return apiFetch("/api/irrigation/pump", { method: "POST", body: form });
+}
+
+// ── Vision Scanner ───────────────────────────────────────────────
+export async function scanLeaf(file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetch("/api/vision/scan-leaf", { method: "POST", body: form });
 }

@@ -1,23 +1,24 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '@/app/components/ui/TopBar';
+import { getMandiPrices, getMandiNearby, getMandiForecast } from '@/app/lib/api';
 
-const commodities = [
-  { name: 'Onion (Red)', nameHi: 'प्याज (लाल)', price: 2450, change: 120, unit: '₹/Quintal' },
-  { name: 'Tomato', nameHi: 'टमाटर', price: 1800, change: -80, unit: '₹/Quintal' },
-  { name: 'Potato', nameHi: 'आलू', price: 1200, change: 50, unit: '₹/Quintal' },
+const defaultCommodities = [
+  { name: 'Onion (Red)', nameHi: 'प्याज (लाल)', name_hi: 'प्याज (लाल)', price: 2450, change: 120, unit: '₹/Quintal' },
+  { name: 'Tomato', nameHi: 'टमाटर', name_hi: 'टमाटर', price: 1800, change: -80, unit: '₹/Quintal' },
+  { name: 'Potato', nameHi: 'आलू', name_hi: 'आलू', price: 1200, change: 50, unit: '₹/Quintal' },
 ];
 
-const mandis = [
-  { name: 'Lasalgaon', distance: 45, price: 2450, arrival: '12,000 q', badge: 'Highest' },
-  { name: 'Pimpalgaon', distance: 32, price: 2380, arrival: '8,500 q', badge: null },
-  { name: 'Nashik APMC', distance: 12, price: 2300, arrival: '4,200 q', badge: 'Nearest' },
+const defaultMandis = [
+  { name: 'Lasalgaon', distance: 45, distance_km: 45, price: 2450, arrival: '12,000 q', badge: 'Highest' },
+  { name: 'Pimpalgaon', distance: 32, distance_km: 32, price: 2380, arrival: '8,500 q', badge: null },
+  { name: 'Nashik APMC', distance: 12, distance_km: 12, price: 2300, arrival: '4,200 q', badge: 'Nearest' },
 ];
 
 // SVG chart data for 15-day price forecast
-const chartPoints = [
+const defaultChartPoints = [
   { x: 0, y: 2200 }, { x: 1, y: 2180 }, { x: 2, y: 2220 },
   { x: 3, y: 2250 }, { x: 4, y: 2230 }, { x: 5, y: 2280 },
   { x: 6, y: 2300 }, { x: 7, y: 2320 }, { x: 8, y: 2350 },
@@ -25,13 +26,14 @@ const chartPoints = [
   { x: 12, y: 2550 }, { x: 13, y: 2580 }, { x: 14, y: 2620 },
 ];
 
-function PriceChart() {
+function PriceChart({ chartPoints }: { chartPoints?: any[] }) {
+  const pts = chartPoints || defaultChartPoints;
   const w = 320, h = 160, px = 30, py = 10;
   const minY = 2000, maxY = 3000;
   const scaleX = (i: number) => px + (i / 14) * (w - px * 2);
   const scaleY = (v: number) => h - py - ((v - minY) / (maxY - minY)) * (h - py * 2);
 
-  const line = chartPoints.map((p, i) =>
+  const line = pts.map((p: any, i: number) =>
     `${i === 0 ? 'M' : 'L'}${scaleX(p.x)},${scaleY(p.y)}`
   ).join(' ');
 
@@ -56,18 +58,18 @@ function PriceChart() {
       {/* Area fill */}
       <path d={area} fill="url(#areaGrad)" />
       {/* Line - history (solid) */}
-      <path d={chartPoints.slice(0, todayIdx + 1).map((p, i) =>
+      <path d={pts.slice(0, todayIdx + 1).map((p: any, i: number) =>
         `${i === 0 ? 'M' : 'L'}${scaleX(p.x)},${scaleY(p.y)}`
       ).join(' ')} fill="none" stroke="#2E7D32" strokeWidth="2.5" strokeLinecap="round" />
       {/* Line - forecast (dashed) */}
-      <path d={chartPoints.slice(todayIdx).map((p, i) =>
+      <path d={pts.slice(todayIdx).map((p: any, i: number) =>
         `${i === 0 ? 'M' : 'L'}${scaleX(p.x)},${scaleY(p.y)}`
       ).join(' ')} fill="none" stroke="#2E7D32" strokeWidth="2" strokeDasharray="4 3" strokeLinecap="round" />
       {/* Today dot */}
-      <circle cx={scaleX(todayIdx)} cy={scaleY(chartPoints[todayIdx].y)} r="5" fill="#2E7D32" />
-      <circle cx={scaleX(todayIdx)} cy={scaleY(chartPoints[todayIdx].y)} r="3" fill="#fff" />
+      <circle cx={scaleX(todayIdx)} cy={scaleY(pts[todayIdx].y)} r="5" fill="#2E7D32" />
+      <circle cx={scaleX(todayIdx)} cy={scaleY(pts[todayIdx].y)} r="3" fill="#fff" />
       {/* Today line */}
-      <line x1={scaleX(todayIdx)} y1={scaleY(chartPoints[todayIdx].y) + 8} x2={scaleX(todayIdx)} y2={h - py}
+      <line x1={scaleX(todayIdx)} y1={scaleY(pts[todayIdx].y) + 8} x2={scaleX(todayIdx)} y2={h - py}
         stroke="#2E7D32" strokeWidth="1" strokeDasharray="3 2" />
       {/* X labels */}
       <text x={scaleX(0)} y={h} textAnchor="start" fill="#9E9E9E" fontSize="9">May 1</text>
@@ -82,14 +84,39 @@ export default function MandiInsightsPage() {
   const [lang, setLang] = useState<'en' | 'hi'>('en');
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('Nearest');
+  const [commodities, setCommodities] = useState(defaultCommodities);
+  const [mandis, setMandis] = useState(defaultMandis);
+  const [forecastData, setForecastData] = useState<any>(null);
 
-  const filteredMandis = [...mandis].sort((a, b) => {
-    if (filter === 'Nearest') return a.distance - b.distance;
-    if (filter === 'Highest Price') return b.price - a.price;
+  useEffect(() => {
+    getMandiPrices().then(res => {
+      if (res?.commodities) {
+        setCommodities(res.commodities.map((c: any) => ({
+          ...c, nameHi: c.name_hi || c.nameHi || c.name,
+        })));
+      }
+    }).catch(() => {});
+    getMandiNearby().then(res => {
+      if (res?.mandis) {
+        setMandis(res.mandis.map((m: any) => ({
+          ...m, distance: m.distance_km || m.distance,
+        })));
+      }
+    }).catch(() => {});
+    getMandiForecast('onion').then(res => {
+      if (res?.forecast_points) {
+        setForecastData(res);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const filteredMandis = [...mandis].sort((a: any, b: any) => {
+    if (filter === 'Nearest') return (a.distance || a.distance_km || 0) - (b.distance || b.distance_km || 0);
+    if (filter === 'Highest Price') return (b.price || 0) - (a.price || 0);
     return 0;
   });
 
-  const selectedCommodity = commodities[0];
+  const selectedCommodity = commodities?.[0] || defaultCommodities[0];
 
   return (
     <div className="dashboard-page">
@@ -128,7 +155,7 @@ export default function MandiInsightsPage() {
           </div>
           <div style={{ flex: 1 }}>
             <p className="mandi-rec-label">{lang === 'en' ? 'Recommendation:' : 'सिफारिश:'}</p>
-            <p className="mandi-rec-action">HOLD</p>
+            <p className="mandi-rec-action">{forecastData?.recommendation || 'HOLD'}</p>
           </div>
           <button className="mandi-rec-info" aria-label="Info">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" strokeWidth="2">
@@ -138,7 +165,7 @@ export default function MandiInsightsPage() {
         </div>
         <p className="mandi-rec-text">
           {lang === 'en'
-            ? 'Current price is slightly below the 30-day average. AI models predict a 5-8% increase in demand next week.'
+            ? forecastData?.reason || 'Current price is slightly below the 30-day average. AI models predict a 5-8% increase in demand next week.'
             : 'वर्तमान मूल्य 30-दिन के औसत से थोड़ा कम है। AI मॉडल अगले सप्ताह मांग में 5-8% वृद्धि की भविष्यवाणी करते हैं।'}
         </p>
       </div>
@@ -160,7 +187,7 @@ export default function MandiInsightsPage() {
           </div>
         </div>
         <div className="chart-container">
-          <PriceChart />
+          <PriceChart chartPoints={forecastData?.forecast_points?.map((y: number, x: number) => ({ x, y }))} />
         </div>
       </div>
 

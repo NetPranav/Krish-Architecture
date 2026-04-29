@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '@/app/components/ui/TopBar';
+import { getAlerts } from '@/app/lib/api';
 
 type AlertCategory = 'Weather' | 'Disease' | 'Mandi' | 'Irrigation';
 
@@ -86,8 +87,20 @@ function AlertIcon({ category }: { category: AlertCategory }) {
 export default function AlertsPage() {
   const router = useRouter();
   const [readIds, setReadIds] = useState<Set<string>>(new Set());
+  const [alertList, setAlertList] = useState<AlertItem[]>(alerts);
 
-  const markAllRead = () => setReadIds(new Set(alerts.map(a => a.id)));
+  useEffect(() => {
+    getAlerts().then(res => {
+      if (res?.alerts && res.alerts.length > 0) {
+        setAlertList(res.alerts.map((a: any) => ({
+          ...a, category: a.category || 'Weather', severity: a.severity || 'info',
+          group: a.group || 'TODAY',
+        })));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const markAllRead = () => setReadIds(new Set(alertList.map(a => a.id)));
   const groups = ['TODAY', 'YESTERDAY', 'THIS WEEK'];
 
   return (
@@ -115,7 +128,7 @@ export default function AlertsPage() {
 
       {/* Alert Groups */}
       {groups.map(group => {
-        const groupAlerts = alerts.filter(a => a.group === group);
+        const groupAlerts = alertList.filter(a => a.group === group);
         if (groupAlerts.length === 0) return null;
         return (
           <div key={group}>

@@ -86,9 +86,9 @@ def get_forecast(lat: float = 20.0063, lon: float = 73.7895) -> dict:
         r.raise_for_status()
         d = r.json()
 
-        # Build hourly (next 9 hours = 3 entries)
+        # Build hourly (next 30 hours = 10 entries)
         hourly = []
-        for item in d["list"][:3]:
+        for item in d["list"][:10]:
             dt = datetime.fromtimestamp(item["dt"])
             hourly.append({
                 "time": dt.strftime("%H:%M") if len(hourly) > 0 else "Now",
@@ -140,7 +140,7 @@ def _mock_current():
         "temperature": 32, "feels_like": 35, "humidity": 65,
         "description": "Partly Cloudy", "icon": "02d",
         "wind_speed": 12, "wind_dir": "NE",
-        "rain_probability": 10, "frost_safe": True,
+        "rain_probability": 0, "frost_safe": True,
         "soil_moisture_status": "Optimal",
     }
 
@@ -149,9 +149,14 @@ def _mock_forecast():
     return {
         "status": "success", "source": "mock",
         "hourly": [
-            {"time": "Now", "icon": "clouds", "temp": 32, "rain_pct": 10},
-            {"time": "14:00", "icon": "clear", "temp": 34, "rain_pct": 5},
-            {"time": "15:00", "icon": "clear", "temp": 35, "rain_pct": 5},
+            {"time": "Now", "icon": "clouds", "temp": 32, "rain_pct": 0},
+            {"time": "14:00", "icon": "clear", "temp": 34, "rain_pct": 0},
+            {"time": "17:00", "icon": "clear", "temp": 35, "rain_pct": 0},
+            {"time": "20:00", "icon": "clouds", "temp": 31, "rain_pct": 5},
+            {"time": "23:00", "icon": "clouds", "temp": 28, "rain_pct": 10},
+            {"time": "02:00", "icon": "rain", "temp": 25, "rain_pct": 40},
+            {"time": "05:00", "icon": "rain", "temp": 24, "rain_pct": 60},
+            {"time": "08:00", "icon": "clouds", "temp": 26, "rain_pct": 20},
         ],
         "weekly": [
             {"day": "Today", "rain": "10%", "low": 22, "high": 35, "icon": "clear", "highlight": False},

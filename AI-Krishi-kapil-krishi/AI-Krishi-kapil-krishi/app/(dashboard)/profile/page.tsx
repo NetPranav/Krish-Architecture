@@ -1,10 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import TopBar from '@/app/components/ui/TopBar';
+import { getProfile } from '@/app/lib/api';
+import { changeAppLanguage } from '@/app/lib/TranslationService';
 
-const menuItems = [
+const defaultMenuItems = [
   { icon: 'user', label: 'Personal Information', sub: '', route: '' },
   { icon: 'location', label: 'Farm Location', sub: 'Nashik, Maharashtra', route: '' },
   { icon: 'bell', label: 'Notifications & Alerts', sub: '', route: '/alerts' },
@@ -46,10 +48,34 @@ function MenuIcon({ type }: { type: string }) {
 export default function ProfilePage() {
   const router = useRouter();
   const [lang, setLang] = useState('English');
+  const [profile, setProfile] = useState<any>({
+    full_name: 'Ramesh Kumar',
+    farm_name: 'Sunrise Farms',
+    land_size: 15,
+    land_unit: 'Acres',
+    membership: 'Premium',
+    location: 'Nashik, Maharashtra'
+  });
+  const [menuItems, setMenuItems] = useState(defaultMenuItems);
+
+  useEffect(() => {
+    getProfile().then(res => {
+      if (res?.profile) {
+        setProfile(res.profile);
+        const mapLang: any = { en: 'English', hi: 'हिंदी', mr: 'मराठी' };
+        if (res.profile.language && mapLang[res.profile.language]) {
+          setLang(mapLang[res.profile.language]);
+        }
+        setMenuItems(prev => prev.map(m => 
+          m.icon === 'location' ? { ...m, sub: res.profile.location || 'Nashik, Maharashtra' } : m
+        ));
+      }
+    }).catch(() => {});
+  }, []);
 
   return (
     <div className="dashboard-page">
-      <TopBar location="Nashik, MH" weather="" />
+      <TopBar location={profile.location || "Nashik, MH"} weather="" />
 
       {/* Profile Card */}
       <div className="profile-hero-card">
@@ -60,8 +86,8 @@ export default function ProfilePage() {
             </svg>
           </div>
         </div>
-        <h1 className="profile-name">Ramesh Kumar</h1>
-        <p className="profile-details">Sunrise Farms • 15 Acres • Premium Member</p>
+        <h1 className="profile-name">{profile.full_name}</h1>
+        <p className="profile-details">{profile.farm_name} • {profile.land_size} {profile.land_unit} • {profile.membership} Member</p>
         <button className="profile-edit-btn">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -115,7 +141,23 @@ export default function ProfilePage() {
             <button
               key={l}
               className={`profile-lang-btn ${lang === l ? 'profile-lang-btn--active' : ''}`}
-              onClick={() => setLang(l)}
+              onClick={async () => {
+                setLang(l);
+                let code = 'en';
+                if (l === 'हिंदी') code = 'hi';
+                if (l === 'मराठी') code = 'mr';
+                
+                // Update frontend translation dynamically
+                changeAppLanguage(code);
+                
+                // Persist setting to the backend
+                try {
+                  const { updateProfile } = await import('@/app/lib/api');
+                  await updateProfile({ language: code });
+                } catch (e) {
+                  console.error('Failed to save language to backend', e);
+                }
+              }}
             >
               {l}
             </button>

@@ -39,6 +39,18 @@ const suppliers = [
 export default function ScannerResultPage() {
   const router = useRouter();
   const [lang, setLang] = useState<'en' | 'hi'>('en');
+  const [scanResult, setScanResult] = useState<any>(null);
+
+  import('react').then(React => {
+    React.useEffect(() => {
+      const stored = sessionStorage.getItem('scanResult');
+      if (stored) {
+        try {
+          setScanResult(JSON.parse(stored));
+        } catch {}
+      }
+    }, []);
+  });
 
   const content = {
     en: {
@@ -120,11 +132,11 @@ export default function ScannerResultPage() {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
-                88% Match
+                {scanResult?.confidence || 88}% Match
               </span>
             </div>
-            <h2 className="disease-name">{t.disease}</h2>
-            <p className="disease-name-sub">{t.diseaseSub}</p>
+            <h2 className="disease-name">{lang === 'hi' ? scanResult?.disease_hi || t.disease : scanResult?.disease || t.disease}</h2>
+            <p className="disease-name-sub">{lang === 'hi' ? scanResult?.disease || t.diseaseSub : scanResult?.disease_hi || t.diseaseSub}</p>
             <p className="disease-desc">{t.diseaseDesc}</p>
           </div>
         </div>
@@ -149,13 +161,17 @@ export default function ScannerResultPage() {
           </div>
         </div>
 
-        {treatments.map((tr) => (
-          <div key={tr.id} className="treatment-card">
+        {(scanResult?.treatment?.length ? scanResult.treatment : treatments).map((tr: any, idx: number) => (
+          <div key={tr.id || idx} className="treatment-card">
             <div className="treatment-card-header">
-              <span className="treatment-type-badge" style={{ color: tr.typeColor, borderColor: tr.typeColor }}>
-                {tr.type}
+              <span className="treatment-type-badge" style={{ color: tr.typeColor || '#C62828', borderColor: tr.typeColor || '#C62828' }}>
+                {tr.type || 'TREATMENT'}
               </span>
-              {tr.icon}
+              {tr.icon || (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gray-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z" />
+                </svg>
+              )}
             </div>
             <p className="treatment-name">{tr.name}</p>
             <p className="treatment-desc">{tr.desc}</p>
