@@ -5,9 +5,9 @@ Login: phone=9876543210, password=smartagri123
 
 HARDCODED_USER = {
     "id": 1,
-    "full_name": "Ramesh Kumar",
-    "phone": "9876543210",
-    "email": "ramesh@smartagri.in",
+    "full_name": "Pranav Dubey",
+    "phone": "9479436780",
+    "email": "devananshdeuby@gmail.com",
     "password": "smartagri123",
     "language": "en",
     "operation": "crop",
@@ -15,7 +15,7 @@ HARDCODED_USER = {
     "land_size": 15,
     "land_unit": "Acres",
     "soil_type": "Loamy",
-    "location": "Nashik, Maharashtra",
+    "location": "Bhopal, Madhya Pradesh",
     "lat": 20.0063,
     "lon": 73.7895,
     "voice_assistance": True,
@@ -31,7 +31,7 @@ def login(email_or_phone: str, password: str) -> dict:
     if (email_or_phone in (u["phone"], u["email"])) and password == u["password"]:
         return {"status": "success", "token": VALID_TOKEN,
                 "user": {k: v for k, v in u.items() if k != "password"}}
-    return {"status": "error", "message": "Invalid credentials. Use phone: 9876543210, password: smartagri123"}
+    return {"status": "error", "message": "Invalid credentials."}
 
 
 def register(full_name: str, phone: str, language: str, operation: str) -> dict:

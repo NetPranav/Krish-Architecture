@@ -161,7 +161,8 @@ class CloudVisionPredictor:
             "disease": disease_parsed.get("class_name"),
             "disease_confidence": disease_parsed.get("confidence", 0.0),
             "soil_type": soil_parsed.get("class_name"),
-            "soil_confidence": soil_parsed.get("confidence", 0.0)
+            "soil_confidence": soil_parsed.get("confidence", 0.0),
+            "bbox": disease_parsed.get("bbox")
         }
 
     # ─────────────────────────────────────────────────────────────────────
@@ -171,10 +172,11 @@ class CloudVisionPredictor:
     def _parse_response(result, default_msg: str) -> dict:
         """
         Walks the Roboflow workflow JSON to find the prediction with
-        the highest confidence score.
+        the highest confidence score, including its bounding box.
         """
         best_class = None
         best_confidence = 0.0
+        best_bbox = None
 
         # ── Normalise to a list if the SDK returns a single dict ──────
         if isinstance(result, dict):
@@ -187,10 +189,13 @@ class CloudVisionPredictor:
                 "class_name": None,
                 "confidence": 0.0,
                 "message": f"Unexpected response type: {type(result).__name__}",
+                "bbox": None
             }
 
         # ── Recursively search for prediction objects ─────────────────
         for item in items:
+            img_w = item.get("image", {}).get("width", 1)
+            img_h = item.get("image", {}).get("height", 1)
             predictions = _extract_predictions(item)
             for pred in predictions:
                 cls_name = pred.get("class", pred.get("class_name", ""))
@@ -198,6 +203,19 @@ class CloudVisionPredictor:
                 if conf > best_confidence:
                     best_confidence = conf
                     best_class = cls_name
+                    
+                    x = pred.get("x")
+                    y = pred.get("y")
+                    w = pred.get("width")
+                    h = pred.get("height")
+                    if x is not None and y is not None and w is not None and h is not None:
+                        # Convert absolute coordinates to percentages
+                        best_bbox = {
+                            "x": min(100, max(0, (x / img_w) * 100)),
+                            "y": min(100, max(0, (y / img_h) * 100)),
+                            "w": min(100, max(0, (w / img_w) * 100)),
+                            "h": min(100, max(0, (h / img_h) * 100)),
+                        }
 
         if best_class is None:
             return {
@@ -205,12 +223,14 @@ class CloudVisionPredictor:
                 "class_name": None,
                 "confidence": 0.0,
                 "message": default_msg,
+                "bbox": None
             }
 
         return {
             "status": "success",
             "class_name": best_class,
             "confidence": round(best_confidence, 4),
+            "bbox": best_bbox
         }
 
 

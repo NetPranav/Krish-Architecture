@@ -13,6 +13,7 @@ class SensorStore:
         self.pump_running = False
         self.pump_start_time = None
         self.water_usage_7d = [35, 50, 30, 45, 25, 60, 0]  # liters, last is today
+        self.last_hardware_data = None
         self.nodes = [
             {"id": "alpha", "name": "Node Alpha", "location": "North Field Sector",
              "battery": 82, "signal": "Strong", "signal_color": "#2E7D32", "online": True},
@@ -21,19 +22,28 @@ class SensorStore:
         ]
 
     def get_live_telemetry(self) -> dict:
-        """Return current sensor readings with slight random variation."""
+        """Return sensor readings, using hardware data if available, else mock."""
         hour = datetime.now().hour
-        # Simulate diurnal temperature variation
-        base_temp = 25 + 8 * math.sin((hour - 6) * math.pi / 12)
-        base_humidity = 65 - 15 * math.sin((hour - 6) * math.pi / 12)
-
-        moisture = max(10, min(95, 75 + random.randint(-10, 5)))
-        n = max(20, 45 + random.randint(-5, 5))
-        p = max(15, 30 + random.randint(-3, 3))
-        k = max(10, 25 + random.randint(-3, 3))
-        ph = round(6.5 + random.uniform(-0.3, 0.3), 1)
-        temp = round(base_temp + random.uniform(-1, 1), 1)
-        humidity = round(base_humidity + random.uniform(-3, 3), 1)
+        
+        # Base values
+        if self.last_hardware_data:
+            moisture = self.last_hardware_data.get("Moisture", 75)
+            n = self.last_hardware_data.get("N", 45)
+            p = self.last_hardware_data.get("P", 30)
+            k = self.last_hardware_data.get("K", 25)
+            ph = self.last_hardware_data.get("ph", 6.5)
+            temp = self.last_hardware_data.get("temperature", 25.0)
+            humidity = self.last_hardware_data.get("humidity", 65.0)
+        else:
+            base_temp = 25 + 8 * math.sin((hour - 6) * math.pi / 12)
+            base_humidity = 65 - 15 * math.sin((hour - 6) * math.pi / 12)
+            moisture = max(10, min(95, 75 + random.randint(-10, 5)))
+            n = max(20, 45 + random.randint(-5, 5))
+            p = max(15, 30 + random.randint(-3, 3))
+            k = max(10, 25 + random.randint(-3, 3))
+            ph = round(6.5 + random.uniform(-0.3, 0.3), 1)
+            temp = round(base_temp + random.uniform(-1, 1), 1)
+            humidity = round(base_humidity + random.uniform(-3, 3), 1)
 
         moisture_status = "Optimal" if moisture > 50 else ("Low" if moisture > 25 else "Critical")
         ph_status = "Optimal" if 6.0 <= ph <= 7.5 else ("Acidic" if ph < 6.0 else "Alkaline")

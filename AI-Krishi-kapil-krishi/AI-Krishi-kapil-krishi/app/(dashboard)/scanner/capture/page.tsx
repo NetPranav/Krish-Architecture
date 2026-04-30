@@ -12,6 +12,7 @@ interface AnalysisResult {
   leafType?: string;
   leafTypeHi?: string;
   error?: string;
+  bbox?: { x: number, y: number, w: number, h: number } | null;
 }
 
 /**
@@ -82,19 +83,22 @@ function analyzeImageForPlant(imageEl: HTMLImageElement): AnalysisResult {
   // Determine leaf type based on color distribution
   let leafType = 'Healthy Leaf';
   let leafTypeHi = 'स्वस्थ पत्ता';
+  let bbox = null; // [x, y, width, height] in percentages
 
   if (brownRatio > 0.15) {
     leafType = 'Diseased Leaf — Late Blight';
     leafTypeHi = 'रोगग्रस्त पत्ता — पछेती झुलसा';
+    bbox = { x: 40, y: 30, w: 25, h: 25 }; // Mock bounding box
   } else if (yellowGreenRatio > greenRatio * 0.4) {
     leafType = 'Nutrient Deficient Leaf';
     leafTypeHi = 'पोषक तत्व की कमी वाला पत्ता';
+    bbox = { x: 30, y: 40, w: 40, h: 40 }; // Mock bounding box
   } else if (darkGreenRatio > greenRatio * 0.6) {
     leafType = 'Healthy Mature Leaf';
     leafTypeHi = 'स्वस्थ परिपक्व पत्ता';
   }
 
-  return { isPlant: true, confidence, leafType, leafTypeHi };
+  return { isPlant: true, confidence, leafType, leafTypeHi, bbox };
 }
 
 export default function ScannerCapturePage() {
@@ -151,6 +155,7 @@ export default function ScannerCapturePage() {
           confidence: res.confidence ? Math.round(res.confidence * 100) : 95,
           leafType: res.disease,
           leafTypeHi: res.disease_hi || res.disease,
+          bbox: res.bbox || null,
         };
         // Store for result page
         if (typeof window !== 'undefined') {
@@ -158,7 +163,8 @@ export default function ScannerCapturePage() {
             disease: res.disease,
             disease_hi: res.disease_hi,
             confidence: res.confidence,
-            treatment: res.treatment
+            treatment: res.treatment,
+            bbox: res.bbox || null
           }));
         }
         setResult(analysis);
@@ -233,12 +239,31 @@ export default function ScannerCapturePage() {
           />
         )}
         {imageUrl && state !== 'idle' && (
-          <Image
-            src={imageUrl}
-            alt="Captured image"
-            fill
-            style={{ objectFit: 'cover' }}
-          />
+          <>
+            <Image
+              src={imageUrl}
+              alt="Captured image"
+              fill
+              style={{ objectFit: 'cover' }}
+            />
+            {state === 'success' && result?.bbox && (
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${result.bbox.x}%`,
+                  top: `${result.bbox.y}%`,
+                  width: `${result.bbox.w}%`,
+                  height: `${result.bbox.h}%`,
+                  border: '3px solid #F44336',
+                  borderRadius: '12px',
+                  boxShadow: '0 0 0 2px rgba(255,255,255,0.5)',
+                  transform: 'translate(-50%, -50%)', // Assuming x/y are center
+                  zIndex: 10,
+                  animation: 'pulse-mic 1.5s ease-in-out infinite'
+                }}
+              />
+            )}
+          </>
         )}
 
         {/* Top Controls */}
@@ -289,7 +314,7 @@ export default function ScannerCapturePage() {
               onClick={() => setFlashOn(!flashOn)}
               aria-label="Toggle flash"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="20" height="20" viewBox="0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
               </svg>
             </button>
@@ -374,22 +399,32 @@ export default function ScannerCapturePage() {
         {state === 'success' && result && (
           <div className="scanner-overlay scanner-overlay--success">
             <div className="scanner-result-card scanner-result-card--success">
-              <div className="scanner-result-icon scanner-result-icon--success">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
+              <div className={`scanner-result-icon ${result.leafType?.includes('Health') ? 'scanner-result-icon--success' : 'scanner-result-icon--error'}`} style={!result.leafType?.includes('Health') ? { background: '#FFEBEE', borderColor: '#FFCDD2' } : {}}>
+                {result.leafType?.includes('Health') ? (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                ) : (
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#C62828" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                )}
               </div>
-              <p className="scanner-result-badge">
+              <p className="scanner-result-badge" style={!result.leafType?.includes('Health') ? { color: '#C62828', background: '#FFEBEE' } : {}}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <polyline points="20 6 9 17 4 12" />
                 </svg>
                 {result.confidence}% Match
               </p>
-              <h3 className="scanner-result-title scanner-result-title--success">Leaf Detected!</h3>
-              <p className="scanner-result-leaf">{result.leafType}</p>
-              <p className="scanner-result-leaf-hi">{result.leafTypeHi}</p>
-              <button className="scanner-result-btn scanner-result-btn--success" onClick={goToResult}>
+              <h3 className={`scanner-result-title ${!result.leafType?.includes('Health') ? 'scanner-result-title--error' : 'scanner-result-title--success'}`}>
+                {result.leafType?.includes('Health') ? 'Healthy Leaf' : 'Disease Detected!'}
+              </h3>
+              <p className="scanner-result-leaf">{result.leafType?.replace('Diseased Leaf — ', '')}</p>
+              <p className="scanner-result-leaf-hi">{result.leafTypeHi?.replace('रोगग्रस्त पत्ता — ', '')}</p>
+              <button className={`scanner-result-btn ${result.leafType?.includes('Health') ? 'scanner-result-btn--success' : ''}`} onClick={goToResult} style={!result.leafType?.includes('Health') ? { background: '#C62828', color: '#fff', borderColor: '#C62828' } : {}}>
                 View Full Analysis
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="9 18 15 12 9 6" />

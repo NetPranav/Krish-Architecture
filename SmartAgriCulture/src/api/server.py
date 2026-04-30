@@ -357,6 +357,21 @@ def api_control_pump(action: str = Form("start")):
 def api_telemetry_live():
     return sensor_store.get_live_telemetry()
 
+from pydantic import BaseModel
+
+class TelemetryPayload(BaseModel):
+    N: Optional[int] = None
+    P: Optional[int] = None
+    K: Optional[int] = None
+    temperature: Optional[float] = None
+    humidity: Optional[float] = None
+    ph: Optional[float] = None
+    Moisture: Optional[int] = None
+
 @app.post("/api/telemetry/sync", tags=["Telemetry"])
-def api_telemetry_sync():
+def api_telemetry_sync(payload: TelemetryPayload = None):
+    if payload:
+        # Save hardware payload so get_live_telemetry() returns real data
+        sensor_store.last_hardware_data = payload.dict(exclude_none=True)
+        return {"status": "success", "message": "Hardware telemetry synced", "data": sensor_store.last_hardware_data}
     return sensor_store.sync()

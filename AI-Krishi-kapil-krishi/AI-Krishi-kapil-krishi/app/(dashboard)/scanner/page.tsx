@@ -72,6 +72,20 @@ export default function ScannerPage() {
         </button>
       </div>
 
+      {/* Camera Scanner CTA Card */}
+      <div className="section-card section-card--highlight" style={{ background: 'linear-gradient(135deg, #2E7D32 0%, #1B5E20 100%)', color: 'white', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '24px', cursor: 'pointer' }} onClick={() => window.location.href = '/scanner/capture'}>
+        <div style={{ flex: 1 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, margin: '0 0 8px 0', color: 'white' }}>Scan Leaf for Diseases</h2>
+          <p style={{ margin: 0, opacity: 0.9, fontSize: '0.9rem' }}>Use your camera to instantly detect crop diseases and get AI treatment advice.</p>
+        </div>
+        <div style={{ background: 'rgba(255,255,255,0.2)', padding: '12px', borderRadius: '50%', marginLeft: '16px' }}>
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+            <circle cx="12" cy="13" r="4" />
+          </svg>
+        </div>
+      </div>
+
       {/* Soil Moisture Gauge */}
       <div className="section-card" style={{ textAlign: 'center' }}>
         <h2 className="section-title" style={{ justifyContent: 'center' }}>Soil Moisture</h2>

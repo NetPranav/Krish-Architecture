@@ -39,8 +39,9 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${poppins.variable} ${notoDevanagari.variable}`}
+      suppressHydrationWarning
     >
-      <body>{children}</body>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }
