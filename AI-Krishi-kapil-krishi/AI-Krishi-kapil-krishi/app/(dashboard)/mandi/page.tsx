@@ -29,7 +29,16 @@ const defaultChartPoints = [
 function PriceChart({ chartPoints }: { chartPoints?: any[] }) {
   const pts = chartPoints || defaultChartPoints;
   const w = 320, h = 160, px = 30, py = 10;
-  const minY = 2000, maxY = 3000;
+  
+  // Dynamically calculate Y-axis bounds based on data
+  const maxDataVal = Math.max(...pts.map((p: any) => p.y));
+  const minDataVal = Math.min(...pts.map((p: any) => p.y));
+  const range = maxDataVal - minDataVal || 100;
+  
+  const maxY = Math.ceil((maxDataVal + range * 0.2) / 100) * 100;
+  const minY = Math.max(0, Math.floor((minDataVal - range * 0.2) / 100) * 100);
+  const midY = Math.round((minY + maxY) / 2);
+
   const scaleX = (i: number) => px + (i / 14) * (w - px * 2);
   const scaleY = (v: number) => h - py - ((v - minY) / (maxY - minY)) * (h - py * 2);
 
@@ -49,7 +58,7 @@ function PriceChart({ chartPoints }: { chartPoints?: any[] }) {
         </linearGradient>
       </defs>
       {/* Y axis labels */}
-      {[2000, 2500, 3000].map(v => (
+      {[minY, midY, maxY].map(v => (
         <g key={v}>
           <line x1={px} y1={scaleY(v)} x2={w - px} y2={scaleY(v)} stroke="#E0E0E0" strokeWidth="0.5" />
           <text x={px - 4} y={scaleY(v) + 4} textAnchor="end" fill="#9E9E9E" fontSize="9">{v}</text>
