@@ -34,9 +34,10 @@ def _set_cache(key: str, data):
 
 
 def get_current(lat: float = 20.0063, lon: float = 73.7895) -> dict:
-    """Get current weather. Falls back to mock data if no API key."""
+    """Get current weather. Relies strictly on OpenWeatherMap API."""
     if not API_KEY:
-        return _mock_current()
+        log.warning("OPENWEATHER_API_KEY not set")
+        return {"status": "error", "message": "API Key missing"}
 
     cache_key = f"current_{lat}_{lon}"
     cached = _get_cached(cache_key)
@@ -65,14 +66,14 @@ def get_current(lat: float = 20.0063, lon: float = 73.7895) -> dict:
         _set_cache(cache_key, result)
         return result
     except Exception as e:
-        log.warning("Weather API failed: %s — using mock", e)
-        return _mock_current()
+        log.warning("Weather API failed: %s", e)
+        return {"status": "error", "message": "API request failed"}
 
 
 def get_forecast(lat: float = 20.0063, lon: float = 73.7895) -> dict:
     """5-day/3-hour forecast. Free tier supports this."""
     if not API_KEY:
-        return _mock_forecast()
+        return {"status": "error", "message": "API Key missing"}
 
     cache_key = f"forecast_{lat}_{lon}"
     cached = _get_cached(cache_key)
@@ -125,44 +126,10 @@ def get_forecast(lat: float = 20.0063, lon: float = 73.7895) -> dict:
         _set_cache(cache_key, result)
         return result
     except Exception as e:
-        log.warning("Forecast API failed: %s — using mock", e)
-        return _mock_forecast()
+        log.warning("Forecast API failed: %s", e)
+        return {"status": "error", "message": "API request failed"}
 
 
 def _deg_to_dir(deg):
     dirs = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
     return dirs[round(deg / 45) % 8]
-
-
-def _mock_current():
-    return {
-        "status": "success", "source": "mock",
-        "temperature": 32, "feels_like": 35, "humidity": 65,
-        "description": "Partly Cloudy", "icon": "02d",
-        "wind_speed": 12, "wind_dir": "NE",
-        "rain_probability": 0, "frost_safe": True,
-        "soil_moisture_status": "Optimal",
-    }
-
-
-def _mock_forecast():
-    return {
-        "status": "success", "source": "mock",
-        "hourly": [
-            {"time": "Now", "icon": "clouds", "temp": 32, "rain_pct": 0},
-            {"time": "14:00", "icon": "clear", "temp": 34, "rain_pct": 0},
-            {"time": "17:00", "icon": "clear", "temp": 35, "rain_pct": 0},
-            {"time": "20:00", "icon": "clouds", "temp": 31, "rain_pct": 5},
-            {"time": "23:00", "icon": "clouds", "temp": 28, "rain_pct": 10},
-            {"time": "02:00", "icon": "rain", "temp": 25, "rain_pct": 40},
-            {"time": "05:00", "icon": "rain", "temp": 24, "rain_pct": 60},
-            {"time": "08:00", "icon": "clouds", "temp": 26, "rain_pct": 20},
-        ],
-        "weekly": [
-            {"day": "Today", "rain": "10%", "low": 22, "high": 35, "icon": "clear", "highlight": False},
-            {"day": "Thu", "rain": "20%", "low": 23, "high": 33, "icon": "clouds", "highlight": False},
-            {"day": "Fri", "rain": "90%", "low": 20, "high": 28, "icon": "rain", "highlight": True},
-            {"day": "Sat", "rain": "60%", "low": 21, "high": 29, "icon": "rain", "highlight": False},
-            {"day": "Sun", "rain": "0%", "low": 22, "high": 32, "icon": "clear", "highlight": False},
-        ],
-    }
