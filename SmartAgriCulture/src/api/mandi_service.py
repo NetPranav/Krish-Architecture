@@ -51,6 +51,59 @@ PRICE_HISTORY = {
 
 def get_prices(commodity: Optional[str] = None, search: str = "") -> dict:
     """Get commodity prices. Tries data.gov.in first, falls back to hardcoded."""
+    if API_KEY:
+        try:
+            r = httpx.get(
+                "https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070",
+                params={
+                    "api-key": API_KEY,
+                    "format": "json",
+                    "filters[state]": "Maharashtra",
+                    "limit": 50
+                },
+                timeout=10
+            )
+            r.raise_for_status()
+            data = r.json()
+            if data.get("records"):
+                live_items = []
+                for rec in data["records"]:
+                    c_name = rec.get("commodity", "")
+                    # apply filters if requested
+                    if search and search.lower() not in c_name.lower(): continue
+                    if commodity and commodity.lower() not in c_name.lower(): continue
+                    
+                    try:
+                        modal = float(rec.get("modal_price", 0))
+                        min_p = float(rec.get("min_price", 0))
+                        max_p = float(rec.get("max_price", 0))
+                        
+                        live_items.append({
+                            "name": c_name.title(),
+                            "market": rec.get("market", ""),
+                            "price": modal,
+                            "change": 0, # Live API doesn't provide yesterday's difference directly
+                            "unit": "₹/Quintal",
+                            "min": min_p,
+                            "max": max_p,
+                            "date": rec.get("arrival_date", "")
+                        })
+                    except ValueError:
+                        continue
+                
+                if live_items:
+                    # Deduplicate by commodity name, keeping the first (latest) one
+                    seen = set()
+                    unique_items = []
+                    for item in live_items:
+                        if item["name"] not in seen:
+                            seen.add(item["name"])
+                            unique_items.append(item)
+                    return {"status": "success", "source": "datagov", "commodities": unique_items}
+        except Exception as e:
+            log.warning("Mandi API failed or timed out: %s — using mock", e)
+
+    # Fallback to hardcoded mock data
     items = COMMODITIES
     if search:
         items = [c for c in items if search.lower() in c["name"].lower() or search in c.get("name_hi", "")]
