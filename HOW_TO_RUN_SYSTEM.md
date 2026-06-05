@@ -76,3 +76,4 @@ netstat -ano | findstr :11434
 netstat -ano | findstr :8000
 taskkill /PID 18308 /F
 python -m uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
