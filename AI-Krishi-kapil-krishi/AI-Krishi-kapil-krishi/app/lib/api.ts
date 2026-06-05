@@ -25,12 +25,24 @@ if (process.env.NEXT_PUBLIC_API_URL) {
 async function apiFetch(path: string, options?: RequestInit) {
   const url = `${API_BASE}${path}`;
   try {
-    const res = await fetch(url, {
+    const resOptions: RequestInit = {
       ...options,
       headers: { 
         ...options?.headers,
       },
-    });
+    };
+
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("smartagri_token");
+      if (token) {
+        resOptions.headers = {
+          ...resOptions.headers,
+          Authorization: `Bearer ${token}`
+        };
+      }
+    }
+
+    const res = await fetch(url, resOptions);
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
       throw new Error(err.message || err.detail || res.statusText);
@@ -53,10 +65,11 @@ export async function login(emailOrPhone: string, password: string) {
   return apiFetch("/api/auth/login", { method: "POST", body: form });
 }
 
-export async function register(fullName: string, phone: string, language: string, operation: string) {
+export async function register(fullName: string, phone: string, password: string, language: string, operation: string) {
   const form = new FormData();
   form.append("full_name", fullName);
   form.append("phone", phone);
+  form.append("password", password);
   form.append("language", language);
   form.append("operation", operation);
   return apiFetch("/api/auth/register", { method: "POST", body: form });

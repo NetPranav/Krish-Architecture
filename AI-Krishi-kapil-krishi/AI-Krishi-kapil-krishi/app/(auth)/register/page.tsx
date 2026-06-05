@@ -34,6 +34,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [language, setLanguage] = useState('en');
   const [operation, setOperation] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -42,35 +43,43 @@ export default function RegisterPage() {
   const validate = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!fullName.trim()) {
-      newErrors.fullName = 'Full name is required.';
-    }
-
+    if (!fullName.trim()) newErrors.fullName = 'Full name is required.';
     if (!phone.trim()) {
       newErrors.phone = 'Phone number is required.';
     } else if (!/^\d{10}$/.test(phone.replace(/\s/g, ''))) {
       newErrors.phone = 'Enter a valid 10-digit mobile number.';
     }
-
-    if (!operation) {
-      newErrors.operation = 'Please select your primary operation.';
+    if (!password) {
+      newErrors.password = 'Password is required.';
+    } else if (password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters.';
     }
+    if (!operation) newErrors.operation = 'Please select your primary operation.';
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleContinue = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleContinue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     if (!validate()) return;
 
     setLoading(true);
-    // Simulate moving to step 2
-    setTimeout(() => {
-      // For now, redirect to dashboard as step 2/3 are not yet implemented
-      router.push('/dashboard');
-    }, 800);
+    try {
+      const { register } = await import('@/app/lib/api');
+      const res = await register(fullName, phone, password, language, operation);
+      if (res?.status === 'success') {
+        if (res.token) localStorage.setItem('smartagri_token', res.token);
+        router.push('/dashboard');
+      } else {
+        setErrors({ form: res?.message || 'Registration failed.' });
+      }
+    } catch (err: any) {
+      setErrors({ form: err.message || 'Error connecting to server.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -91,6 +100,8 @@ export default function RegisterPage() {
 
       {/* Form */}
       <form onSubmit={handleContinue} noValidate>
+        {errors.form && <p className="form-error" style={{ marginBottom: 16, textAlign: 'center' }}>{errors.form}</p>}
+        
         <FormInput
           id="register-name"
           label="Full Name"
@@ -117,13 +128,32 @@ export default function RegisterPage() {
           placeholder="10-digit mobile number"
           value={phone}
           onChange={(val) => {
-            // Allow only digits
             const cleaned = val.replace(/\D/g, '').slice(0, 10);
             setPhone(cleaned);
             if (errors.phone) setErrors((e) => ({ ...e, phone: '' }));
           }}
           error={errors.phone}
           prefix="+91"
+        />
+
+        <FormInput
+          id="register-password"
+          label="Password"
+          type="password"
+          placeholder="Create a password"
+          value={password}
+          onChange={(val) => {
+            setPassword(val);
+            if (errors.password) setErrors((e) => ({ ...e, password: '' }));
+          }}
+          error={errors.password}
+          showPasswordToggle
+          leadingIcon={
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+            </svg>
+          }
         />
 
         <FormSelect
@@ -170,7 +200,7 @@ export default function RegisterPage() {
           disabled={loading}
           style={{ opacity: loading ? 0.7 : 1, marginTop: 8 }}
         >
-          {loading ? 'Processing...' : 'Continue →'}
+          {loading ? 'Processing...' : 'Create Account'}
         </button>
       </form>
 

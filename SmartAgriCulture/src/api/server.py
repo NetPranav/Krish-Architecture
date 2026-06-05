@@ -12,10 +12,19 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+security = HTTPBearer(auto_error=False)
+
+def get_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    if credentials:
+        return credentials.credentials
+    # For demo fallback if no token provided
+    return ""
 
 from src.api import auth, weather_service, mandi_service, chemical_db
 from src.api.alert_engine import AlertEngine
@@ -105,9 +114,9 @@ def api_login(email_or_phone: str = Form(...), password: str = Form(...)):
     return auth.login(email_or_phone, password)
 
 @app.post("/api/auth/register", tags=["Auth"])
-def api_register(full_name: str = Form(...), phone: str = Form(...),
+def api_register(full_name: str = Form(...), phone: str = Form(...), password: str = Form(...),
                  language: str = Form("en"), operation: str = Form(...)):
-    return auth.register(full_name, phone, language, operation)
+    return auth.register(full_name, phone, password, language, operation)
 
 @app.post("/api/auth/otp/send", tags=["Auth"])
 def api_otp_send(phone: str = Form(...)):
@@ -124,14 +133,16 @@ def api_otp_verify(phone: str = Form(...), otp: str = Form(...)):
 # 2. PROFILE
 # ═══════════════════════════════════════════════════════════════════
 @app.get("/api/profile", tags=["Profile"])
-def api_get_profile():
-    return {"status": "success", "profile": auth.get_profile()}
+def api_get_profile(token: str = Depends(get_token)):
+    profile = auth.get_profile(token)
+    if not profile: return {"status": "error", "message": "Unauthorized"}
+    return {"status": "success", "profile": profile}
 
 @app.put("/api/profile", tags=["Profile"])
 def api_update_profile(land_size: Optional[str] = Form(None), land_unit: Optional[str] = Form(None),
                        soil_type: Optional[str] = Form(None), voice_assistance: Optional[bool] = Form(None),
-                       language: Optional[str] = Form(None)):
-    return auth.update_profile(land_size=land_size, land_unit=land_unit, soil_type=soil_type,
+                       language: Optional[str] = Form(None), token: str = Depends(get_token)):
+    return auth.update_profile(token, land_size=land_size, land_unit=land_unit, soil_type=soil_type,
                                voice_assistance=voice_assistance, language=language)
 
 
@@ -139,8 +150,10 @@ def api_update_profile(land_size: Optional[str] = Form(None), land_unit: Optiona
 # 3. DASHBOARD (aggregated from all services)
 # ═══════════════════════════════════════════════════════════════════
 @app.get("/api/dashboard", tags=["Dashboard"])
-def api_dashboard():
-    profile = auth.get_profile()
+def api_dashboard(token: str = Depends(get_token)):
+    profile = auth.get_profile(token)
+    if not profile:
+        profile = {"lat": 20.0, "lon": 73.8, "location": "Unknown"} # fallback
     weather = weather_service.get_current(profile["lat"], profile["lon"])
     telemetry = sensor_store.get_live_telemetry()
     prices = mandi_service.get_prices()

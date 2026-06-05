@@ -35,14 +35,15 @@ export default function LoginPage() {
     try {
       const res = await login(emailOrPhone, password);
       if (res?.status === 'success') {
+        if (res.token) localStorage.setItem('smartagri_token', res.token);
         router.push('/dashboard');
       } else {
-        setError(res?.message || 'Invalid credentials. Use: 9876543210 / smartagri123');
-        setLoading(false);
+        setError(res?.message || 'Invalid credentials.');
       }
-    } catch {
-      // Fallback: allow login even without backend
-      router.push('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Error connecting to server.');
+    } finally {
+      setLoading(false);
     }
   };
 
