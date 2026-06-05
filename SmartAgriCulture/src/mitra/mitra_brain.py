@@ -2,11 +2,11 @@
 ==============================================================================
   SmartAgri · Mitra Brain — The Agentic Orchestrator
   ──────────────────────────────────────────────────
-  VRAM-Aware orchestrator for 16GB RAM / 8GB VRAM systems.
+  Cloud-first orchestrator using NVIDIA NIM API.
 
   Key Design:
-    - Phased GPU memory: clears VRAM before loading each model
-    - Ollama gpt4o-s:20b with constrained context (4096 tokens)
+    - NVIDIA NIM API (OpenAI-compatible) for LLM inference
+    - Fast model: meta/llama-3.1-8b-instruct (~1-2s responses)
     - AI writes new DB rows ONLY when user reveals new facts
     - Vision models lazy-loaded and unloaded after use
 ==============================================================================
@@ -19,12 +19,12 @@ import json
 import logging
 import warnings
 import time
-import httpx
 import numpy as np
 import pandas as pd
 import joblib
 
 from datetime import datetime, timezone
+from openai import OpenAI
 from src.mitra.datastore import FarmDataStore
 
 warnings.filterwarnings("ignore")
@@ -33,47 +33,15 @@ logging.basicConfig(level=logging.INFO,
                     datefmt="%H:%M:%S")
 log = logging.getLogger(__name__)
 
-OLLAMA_BASE_URL = os.getenv("OLLAMA_URL", "http://localhost:11434")
-OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "gpt4o-s:20b")
+# ── NVIDIA NIM API Configuration ─────────────────────────────────────────
+NVIDIA_API_KEY  = os.getenv("NVIDIA_API_KEY", "")
+NVIDIA_MODEL    = os.getenv("NVIDIA_MODEL", "meta/llama-3.1-8b-instruct")
+NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 CROP_MODEL_DIR  = "models/crop_detection"
 FERT_MODEL_PATH = "models/fertilizer_optimization/master_ag_model.pkl"
 
 
-# ─────────────────────────────────────────────────────────────────────────
-# VRAM Manager — clears GPU memory between model phases
-# ─────────────────────────────────────────────────────────────────────────
-class VRAMManager:
-    """Manages GPU memory for systems with limited VRAM (8GB)."""
-
-    @staticmethod
-    def clear_gpu():
-        """Force-clear all GPU memory so the next model can load."""
-        gc.collect()
-        try:
-            import torch
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()
-                allocated = torch.cuda.memory_allocated() / 1024**2
-                log.info("  GPU memory cleared. Allocated: %.1f MB", allocated)
-        except ImportError:
-            pass  # No torch = CPU-only XGBoost, no VRAM to manage
-
-    @staticmethod
-    def get_gpu_status() -> dict:
-        try:
-            import torch
-            if torch.cuda.is_available():
-                return {
-                    "gpu_available": True,
-                    "gpu_name": torch.cuda.get_device_name(0),
-                    "allocated_mb": round(torch.cuda.memory_allocated() / 1024**2, 1),
-                    "reserved_mb": round(torch.cuda.memory_reserved() / 1024**2, 1),
-                }
-        except ImportError:
-            pass
-        return {"gpu_available": False}
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -82,12 +50,11 @@ class VRAMManager:
 class MitraOrchestrator:
     """
     Central brain of SmartAgri. Accepts user text, live sensors,
-    and optional image bytes. Orchestrates all models with VRAM-aware
-    phased loading, queries the LLM, and persists everything to SQLite.
+    and optional image bytes. Orchestrates all models, queries the
+    NVIDIA NIM LLM API, and persists everything to SQLite.
     """
 
     def __init__(self):
-        self.vram = VRAMManager()
         self.datastore = FarmDataStore()
 
         # ML models (loaded on-demand, unloaded after use if needed)
@@ -101,10 +68,15 @@ class MitraOrchestrator:
         self._load_crop_model()
         self._load_fert_model()
 
-        # Ollama HTTP client
-        self.llm_client = httpx.Client(timeout=180.0)
+        # NVIDIA NIM API client (OpenAI-compatible)
+        if not NVIDIA_API_KEY:
+            log.warning("NVIDIA_API_KEY not set — LLM calls will fail!")
+        self.llm_client = OpenAI(
+            base_url=NVIDIA_BASE_URL,
+            api_key=NVIDIA_API_KEY or "placeholder",
+        )
 
-        log.info("MitraOrchestrator initialised.")
+        log.info("MitraOrchestrator initialised (model=%s).", NVIDIA_MODEL)
 
     # ─────────────────────────────────────────────────────────────────────
     # Model Loaders
@@ -140,8 +112,8 @@ class MitraOrchestrator:
         if self.vision_predictor is not None:
             del self.vision_predictor
             self.vision_predictor = None
-            self.vram.clear_gpu()
-            log.info("Vision predictor unloaded, VRAM freed.")
+            gc.collect()
+            log.info("Vision predictor unloaded.")
 
     # ─────────────────────────────────────────────────────────────────────
     # Feature Engineering
@@ -171,8 +143,7 @@ class MitraOrchestrator:
     # Phase A: Vision AI (image → disease + soil)
     # ─────────────────────────────────────────────────────────────────────
     def _run_vision(self, image_bytes: bytes) -> dict:
-        log.info("[Phase A] VRAM clear -> loading Vision AI...")
-        self.vram.clear_gpu()
+        log.info("[Phase A] Loading Vision AI...")
 
         predictor = self._get_vision_predictor()
         if predictor is None:
@@ -191,7 +162,6 @@ class MitraOrchestrator:
             return {"disease": None, "disease_confidence": 0.0,
                     "soil_type": None, "soil_confidence": 0.0}
         finally:
-            # Always unload vision after use to free VRAM for LLM
             self._unload_vision()
 
     # ─────────────────────────────────────────────────────────────────────
@@ -241,58 +211,63 @@ class MitraOrchestrator:
                 for i, name in enumerate(TARGETS)}
 
     # ─────────────────────────────────────────────────────────────────────
-    # Phase D: LLM Call (Ollama gpt4o-s:20b)
+    # Phase D: LLM Call (NVIDIA NIM API — meta/llama-3.1-8b-instruct)
     # ─────────────────────────────────────────────────────────────────────
     def _call_llm(self, system_prompt: str, user_message: str) -> dict:
         """
-        Calls Ollama with strict memory constraints:
-          - num_ctx: 4096 (fits in 8GB VRAM with 20B model at Q4)
-          - num_predict: 512 (limit output length)
-          - temperature: 0.4 (factual, low hallucination)
+        Calls NVIDIA NIM API (OpenAI-compatible) for fast cloud inference.
+          - Model: meta/llama-3.1-8b-instruct (fastest, ~1-2s)
+          - max_tokens: 200 (keep responses short)
+          - temperature: 0.3 (factual, low hallucination)
         """
-        log.info("[Phase D] VRAM clear -> calling Ollama %s...", OLLAMA_MODEL)
-        self.vram.clear_gpu()
-
-        payload = {
-            "model": OLLAMA_MODEL,
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_message},
-            ],
-            "stream": False,
-            "format": "json",
-            "options": {
-                "temperature": 0.4,
-                "num_ctx": 4096,
-                "num_predict": 512,
-                "num_gpu": 99,       # offload all layers to GPU
-                "num_thread": 8,     # use 8 CPU threads for prompt eval
-            },
-        }
+        log.info("[Phase D] Calling NVIDIA NIM API (%s)...", NVIDIA_MODEL)
 
         try:
-            resp = self.llm_client.post(
-                f"{OLLAMA_BASE_URL}/api/chat", json=payload
+            completion = self.llm_client.chat.completions.create(
+                model=NVIDIA_MODEL,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_message},
+                ],
+                temperature=0.3,
+                top_p=0.5,
+                max_tokens=200,
             )
-            resp.raise_for_status()
-            content = resp.json().get("message", {}).get("content", "{}")
-            parsed = json.loads(content)
-            return {
-                "farmer_response": parsed.get("farmer_response",
-                    "I could not process your request right now."),
-                "user_notes": parsed.get("user_notes"),
-                "profile_updates": parsed.get("profile_updates"),
-            }
-        except json.JSONDecodeError:
-            log.warning("LLM returned non-JSON, using raw text.")
-            return {"farmer_response": content or "Processing error.",
-                    "user_notes": None, "profile_updates": None}
+            content = completion.choices[0].message.content or "{}"
+
+            # Try to parse as JSON first
+            try:
+                parsed = json.loads(content)
+                return {
+                    "farmer_response": parsed.get("farmer_response",
+                        "I could not process your request right now."),
+                    "user_notes": parsed.get("user_notes"),
+                    "profile_updates": parsed.get("profile_updates"),
+                }
+            except json.JSONDecodeError:
+                # If the model didn't return valid JSON, try to extract it
+                import re
+                json_match = re.search(r'\{[^{}]*\}', content, re.DOTALL)
+                if json_match:
+                    try:
+                        parsed = json.loads(json_match.group())
+                        return {
+                            "farmer_response": parsed.get("farmer_response", content),
+                            "user_notes": parsed.get("user_notes"),
+                            "profile_updates": parsed.get("profile_updates"),
+                        }
+                    except json.JSONDecodeError:
+                        pass
+                log.warning("LLM returned non-JSON, using raw text.")
+                return {"farmer_response": content.strip(),
+                        "user_notes": None, "profile_updates": None}
+
         except Exception as e:
-            log.error("Ollama call failed: %s", e)
+            log.error("NVIDIA NIM API call failed: %s", e)
             return {
                 "farmer_response": (
-                    "I'm having trouble connecting to my brain right now. "
-                    "Please check that Ollama is running: ollama serve"
+                    "I'm having trouble connecting right now. "
+                    "Please try again in a moment."
                 ),
                 "user_notes": None, "profile_updates": None,
             }
@@ -334,13 +309,9 @@ You help Indian farmers understand their crop health and make decisions.
 RULES:
 1. Respond in simple, clear language a farmer can understand.
 2. Base advice on the REAL DATA below only. Never guess.
-3. Keep responses concise (2-4 sentences for simple questions).
-4. You MUST respond in this exact JSON format:
-{{
-  "farmer_response": "Your helpful answer...",
-  "user_notes": "any NEW fact the user mentioned" or null,
-  "profile_updates": {{"key": "value"}} or null
-}}
+3. EXTREMELY CRITICAL: Keep your answer incredibly short (1-2 sentences maximum). Do not over-explain.
+4. You MUST respond ONLY with valid JSON in this exact format (no extra text before or after):
+{{"farmer_response": "Your 1-2 sentence helpful answer...", "user_notes": null, "profile_updates": null}}
 
 5. Set "user_notes" ONLY if the user reveals something NEW (e.g. "I watered today", "my land is 5 acres").
 6. Set "profile_updates" ONLY if the user mentions a PERSISTENT fact:
@@ -348,24 +319,10 @@ RULES:
    - Example: user says "I have 3 acres" -> {{"land_size_acres": "3"}}
    - If the user just asks a question, set BOTH to null.
 
-=== USER PROFILE ===
-{profile_text}
-
-=== FARM HISTORY (last 5 interactions) ===
-{history_text}
-
-=== CURRENT SESSION ===
-Current Crop: {current_crop}
-AI Recommended Crop: {recommended_crop} (confidence: {crop_confidence:.0%})
-Soil Type: {soil_type}
-Days Since Planting: {days}
-
-LIVE SENSORS:
-{sensor_text}
-
+Current Crop: {current_crop} | Recommended: {recommended_crop} ({crop_confidence:.0%}) | Soil: {soil_type} | Day: {days}
+Sensors: {sensor_text}
 {disease_sec}
-FERTILIZER AI (model output):
-{fert_text}
+Fert: {fert_text}
 """
 
     # ─────────────────────────────────────────────────────────────────────
@@ -395,7 +352,7 @@ FERTILIZER AI (model output):
 
         # ── Step 1: Historical Context ────────────────────────────────
         log.info("[Step 1] Reading ledger + profile...")
-        history_text = self.datastore.format_history_for_llm(n=5)
+        history_text = self.datastore.format_history_for_llm(n=3)
         profile_text = self.datastore.format_profile_for_llm()
         latest_rows = self.datastore.get_latest_state(n=1)
         latest = latest_rows[0] if latest_rows else {}
@@ -430,8 +387,8 @@ FERTILIZER AI (model output):
             days_since_planting)
         log.info("  Soil Health: %.1f/100", fert_output.get("Soil_Health_Score", 0))
 
-        # ── Phase D: LLM (clear VRAM first, then call Ollama) ────────
-        log.info("[Phase D] Building prompt -> calling LLM...")
+        # ── Phase D: LLM (NVIDIA NIM API call) ────────────────────────
+        log.info("[Phase D] Building prompt -> calling NVIDIA NIM API...")
         derived = self._compute_derived_features(live_sensors)
 
         system_prompt = self._build_system_prompt(

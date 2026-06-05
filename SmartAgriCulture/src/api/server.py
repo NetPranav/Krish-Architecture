@@ -2,7 +2,7 @@
 SmartAgri · Unified API Gateway (v2 — All Systems Wired)
 =========================================================
 RUN:   uvicorn src.api.server:app --host 0.0.0.0 --port 8000 --reload
-NGROK: ngrok http 8000
+       (ngrok auto-starts if NGROK_ENABLED=true in .env)
 """
 
 import json, logging, time, os
@@ -15,6 +15,7 @@ load_dotenv()
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from src.api import auth, weather_service, mandi_service, chemical_db
 from src.api.alert_engine import AlertEngine
@@ -24,9 +25,12 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger(__name__)
 
 app = FastAPI(title="SmartAgri Unified API", version="2.0.0",
-              description="Complete backend for AI-Krishi frontend. Run on GPU machine, tunnel via ngrok.")
+              description="Complete backend for AI-Krishi frontend. Auto-tunnels via ngrok.")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True,
                    allow_methods=["*"], allow_headers=["*"])
+
+# ── Public URL (set by deployment platform) ───────────────────────
+PUBLIC_URL: Optional[str] = os.getenv("RENDER_EXTERNAL_URL", None)
 
 # ── Singletons ───────────────────────────────────────────────────
 alert_engine = AlertEngine()
@@ -40,6 +44,13 @@ fert_advisor = vision_predictor = mitra_orchestrator = None
 @app.on_event("startup")
 def load_models():
     global crop_model, crop_scaler, crop_encoder, fert_advisor, vision_predictor, mitra_orchestrator
+    
+    log.info("─" * 60)
+    log.info("SmartAgri Backend Starting...")
+    if PUBLIC_URL:
+        log.info("✅ Deployed at: %s", PUBLIC_URL)
+    log.info("─" * 60)
+
     try:
         import joblib
         base = "models/crop_detection"
@@ -64,20 +75,26 @@ def load_models():
     try:
         from src.mitra.mitra_brain import MitraOrchestrator
         mitra_orchestrator = MitraOrchestrator()
-        log.info("✅ Mitra loaded")
+        log.info("✅ Mitra loaded (NVIDIA NIM API)")
     except Exception as e:
         log.warning("⚠️  Mitra: %s", e)
 
 
 # ═══════════════════════════════════════════════════════════════════
-# HEALTH
+# HEALTH & NGROK
 # ═══════════════════════════════════════════════════════════════════
 @app.get("/", tags=["Health"])
 def health():
     return {"service": "SmartAgri Unified API", "status": "online",
             "weather_api": bool(os.getenv("OPENWEATHER_API_KEY")),
+            "public_url": PUBLIC_URL,
             "models": {"crop": crop_model is not None, "fertilizer": fert_advisor is not None,
                        "vision": vision_predictor is not None, "mitra": mitra_orchestrator is not None}}
+
+@app.get("/api/ngrok", tags=["System"])
+def get_ngrok_url():
+    """Legacy endpoint — returns public URL for backward compat."""
+    return {"status": "success", "url": PUBLIC_URL}
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -283,7 +300,7 @@ async def api_mitra_chat(text: str = Form(...), sensors: str = Form(...),
                          crop: Optional[str] = Form(None), days: Optional[int] = Form(60),
                          image: Optional[UploadFile] = File(None)):
     if mitra_orchestrator is None:
-        raise HTTPException(503, "Mitra not available. Ensure Ollama is running.")
+        raise HTTPException(503, "Mitra not available. Check NVIDIA_API_KEY in .env.")
     sensor_dict = json.loads(sensors)
     image_bytes = None
     if image:

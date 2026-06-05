@@ -1,0 +1,33 @@
+# ╔══════════════════════════════════════════════════════╗
+# ║  SmartAgri · Render Deployment Configuration         ║
+# ╚══════════════════════════════════════════════════════╝
+#
+# This file tells Render how to build and run the backend.
+# Push this repo to GitHub, then connect it in Render Dashboard.
+#
+# Set these ENVIRONMENT VARIABLES in Render Dashboard:
+#   NVIDIA_API_KEY    = nvapi-YOUR_KEY_HERE
+#   ROBOFLOW_API_KEY  = your_roboflow_key
+#   OPENWEATHER_API_KEY = (optional)
+#   NVIDIA_MODEL      = meta/llama-3.1-8b-instruct (optional, this is default)
+
+services:
+  - type: web
+    name: smartagri-backend
+    runtime: python
+    region: oregon
+    # Since you are pushing ONLY the SmartAgriCulture folder to GitHub,
+    # this folder becomes the root directory of your repo.
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.server:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: ROBOFLOW_API_KEY
+        sync: false
+      - key: OPENWEATHER_API_KEY
+        sync: false
+    healthCheckPath: /
+    autoDeploy: true

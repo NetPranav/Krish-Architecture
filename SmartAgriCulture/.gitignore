@@ -1,0 +1,42 @@
+# Environment Variables
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Do not ignore template/example env files
+!.env.example
+!.env.template
+!.env.sample
+
+# Python Virtual Environments
+env/
+venv/
+.env/
+.venv/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+logs/
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# SQLite Database (don't push local DB state, render will start fresh or use a mounted disk)
+data/*.db
+data/*.sqlite3
+
+# Keep the data folder but not its DB files
+!data/.keep

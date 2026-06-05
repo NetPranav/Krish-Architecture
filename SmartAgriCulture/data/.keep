@@ -1,0 +1,1 @@
+This file ensures git tracks the data directory, but local database files are ignored.
