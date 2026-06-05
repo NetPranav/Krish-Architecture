@@ -9,17 +9,18 @@
 // 2. Same host as frontend on port 8000 (local network / dev)
 // 3. Fallback to localhost:8000
 
-let API_BASE = "http://localhost:8000";
+let API_BASE = "https://krish-architecture.onrender.com";
 
-if (typeof window !== "undefined") {
-  // For local dev: point to the same host as the frontend but on port 8000
-  API_BASE = `http://${window.location.hostname}:8000`;
-}
-
-// Render deployment URL overrides everything
+// If explicitly set via env var (e.g. Next.js build), use that.
 if (process.env.NEXT_PUBLIC_API_URL) {
   API_BASE = process.env.NEXT_PUBLIC_API_URL;
+} else if (typeof window !== "undefined") {
+  // If we are definitely on a local web dev server, we can try local network
+  if (window.location.hostname !== "localhost" && window.location.hostname !== "" && !window.location.protocol.includes("file")) {
+    // API_BASE = `http://${window.location.hostname}:8000`; // Uncomment if local network testing is needed again
+  }
 }
+
 
 async function apiFetch(path: string, options?: RequestInit) {
   const url = `${API_BASE}${path}`;

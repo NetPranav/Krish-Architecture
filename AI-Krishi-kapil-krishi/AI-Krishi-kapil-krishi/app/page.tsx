@@ -20,12 +20,12 @@ export default function Home() {
         <p className="landing-hindi">आपका अपना स्मार्ट खेती सहायक</p>
 
         <div className="landing-buttons">
-          <a href="/register" className="btn btn-primary" id="btn-get-started">
+          <Link href="/register" className="btn btn-primary" id="btn-get-started">
             Get Started
-          </a>
-          <a href="/login" className="btn btn-outline" id="btn-login">
+          </Link>
+          <Link href="/login" className="btn btn-outline" id="btn-login">
             Login
-          </a>
+          </Link>
         </div>
       </div>
     </main>
