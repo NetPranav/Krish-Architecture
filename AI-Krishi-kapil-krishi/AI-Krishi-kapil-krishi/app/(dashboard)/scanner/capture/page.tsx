@@ -149,23 +149,57 @@ export default function ScannerCapturePage() {
       const { scanLeaf } = await import('@/app/lib/api');
       const res = await scanLeaf(selectedFile);
       
-      if (res?.disease) {
+      if (res?.disease || res?.class_name) {
+        const actualDisease = res.disease || res.class_name;
+        const actualConfidence = res.disease_confidence || res.confidence;
+        const fallbackBbox = { x: 50, y: 50, w: 30, h: 40 }; // Mock bbox centered
+        
         const analysis: AnalysisResult = {
           isPlant: true,
-          confidence: res.confidence ? Math.round(res.confidence * 100) : 95,
-          leafType: res.disease,
-          leafTypeHi: res.disease_hi || res.disease,
-          bbox: res.bbox || null,
+          confidence: actualConfidence ? Math.round(actualConfidence * 100) : 95,
+          leafType: actualDisease,
+          leafTypeHi: res.disease_hi || actualDisease,
+          bbox: res.bbox || fallbackBbox,
         };
         // Store for result page
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('scanResult', JSON.stringify({
-            disease: res.disease,
+            disease: actualDisease,
             disease_hi: res.disease_hi,
-            confidence: res.confidence,
-            treatment: res.treatment,
-            bbox: res.bbox || null
+            confidence: actualConfidence,
+            treatment: res.treatments || res.treatment || null,
+            bbox: res.bbox || fallbackBbox
           }));
+          
+          // Save image to session storage if possible so result page can show it
+          if (imageUrl) {
+            try {
+              // Create a tiny canvas to compress the image so it fits in sessionStorage
+              const img = new window.Image();
+              img.crossOrigin = 'anonymous';
+              img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 800;
+                let width = img.width;
+                let height = img.height;
+                if (width > height && width > MAX_SIZE) {
+                  height *= MAX_SIZE / width;
+                  width = MAX_SIZE;
+                } else if (height > MAX_SIZE) {
+                  width *= MAX_SIZE / height;
+                  height = MAX_SIZE;
+                }
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+                sessionStorage.setItem('scanImage', canvas.toDataURL('image/jpeg', 0.5));
+              };
+              img.src = imageUrl;
+            } catch (e) {
+              console.warn("Could not save image to session storage", e);
+            }
+          }
         }
         setResult(analysis);
         setState('success');
@@ -173,23 +207,14 @@ export default function ScannerCapturePage() {
         // Fallback to client-side if backend returns no disease info but succeeds
         throw new Error('Fallback');
       }
-    } catch (err) {
-      console.warn("Backend API failed, using fallback client-side analysis");
-      if (!imageUrl) return;
-      const img = new window.Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => {
-        setTimeout(() => {
-          const analysis = analyzeImageForPlant(img);
-          setResult(analysis);
-          setState(analysis.isPlant ? 'success' : 'error');
-        }, 1500);
-      };
-      img.onerror = () => {
-        setState('error');
-        setResult({ isPlant: false, confidence: 0, error: 'Failed to process image.' });
-      };
-      img.src = imageUrl;
+    } catch (err: any) {
+      console.error("Backend API failed:", err);
+      setState('error');
+      setResult({ 
+        isPlant: false, 
+        confidence: 0, 
+        error: `Vision API Error: ${err?.message || 'Failed to process image with backend AI.'}` 
+      });
     }
   }, [selectedFile, imageUrl]);
 

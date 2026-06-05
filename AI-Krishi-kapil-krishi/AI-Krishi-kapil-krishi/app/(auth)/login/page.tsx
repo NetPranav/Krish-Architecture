@@ -35,14 +35,14 @@ export default function LoginPage() {
     try {
       const res = await login(emailOrPhone, password);
       if (res?.status === 'success') {
-        window.location.href = '/dashboard';
+        router.push('/dashboard');
       } else {
         setError(res?.message || 'Invalid credentials. Use: 9876543210 / smartagri123');
         setLoading(false);
       }
     } catch {
       // Fallback: allow login even without backend
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
     }
   };
 

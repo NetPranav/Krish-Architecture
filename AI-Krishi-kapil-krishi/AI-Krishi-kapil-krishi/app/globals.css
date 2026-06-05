@@ -4641,13 +4641,21 @@ a:hover {
 
 @media (min-width: 1024px) {
   .dashboard-page {
-    max-width: 1100px;
+    max-width: 1400px;
+    padding: 0 20px;
   }
 
-  /* 3-column metric grid on wide screens */
+  /* 4-column metric grid on wide screens for better desktop layout */
   .metric-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 20px;
+  }
+
+  /* Section cards with better spacing for charts */
+  .section-card {
+    padding: 24px;
+    border-radius: 20px;
+    margin-bottom: 24px;
   }
 
   .auth-card {
@@ -4670,6 +4678,11 @@ a:hover {
 
   .profile-setup-page {
     max-width: 700px;
+  }
+
+  /* Better spacing for chart containers */
+  .dashboard-page > div {
+    margin-bottom: 24px;
   }
 }
 

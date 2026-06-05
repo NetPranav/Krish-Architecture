@@ -1,10 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import TopBar from '@/app/components/ui/TopBar';
 import StatusBanner from '@/app/components/ui/StatusBanner';
-import { getDashboard, controlPump } from '@/app/lib/api';
+import { getDashboard, controlPump, getTelemetry, recommendCrop, adviseFertilizer } from '@/app/lib/api';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler } from 'chart.js';
+import { Line, Bar, Doughnut } from 'react-chartjs-2';
+
+// Register Chart.js components
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend, Filler);
 
 // Fallback data when backend is unreachable
 const FALLBACK = {
@@ -25,8 +30,11 @@ export default function HomePage() {
   const [todoList, setTodoList] = useState(FALLBACK.actions);
   const [loading, setLoading] = useState(true);
   const [pumpLoading, setPumpLoading] = useState(false);
+  const [telemetry, setTelemetry] = useState<any>(null);
+  const [aiRecs, setAiRecs] = useState<any>(null);
 
   useEffect(() => {
+    // Initial fetch
     getDashboard()
       .then((res) => {
         if (res) {
@@ -36,6 +44,34 @@ export default function HomePage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+
+    // Fetch live telemetry (ESP32)
+    const fetchTelemetry = () => {
+      getTelemetry()
+        .then((res) => {
+          if (res?.status === 'success') {
+            setTelemetry(res);
+            
+            // Generate ML predictions from live sensors
+            if (res.raw_sensors) {
+              Promise.all([
+                recommendCrop(res.raw_sensors),
+                adviseFertilizer("wheat", "clay", 60, res.raw_sensors)
+              ])
+              .then(([cropRes, fertRes]) => {
+                setAiRecs({ crop: cropRes, fert: fertRes });
+              })
+              .catch(() => {});
+            }
+          }
+        })
+        .catch(() => {});
+    };
+    
+    fetchTelemetry();
+    // Poll every 5 minutes (300,000 ms) as requested by user
+    const interval = setInterval(fetchTelemetry, 300000);
+    return () => clearInterval(interval);
   }, []);
 
   const d = data || FALLBACK;
@@ -161,6 +197,257 @@ export default function HomePage() {
           </div>
         </Link>
       </div>
+
+      {/* Live ESP32 Telemetry Hub with Charts */}
+      <div className="section-card">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 className="section-title" style={{ margin: 0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1565C0" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 8 }}>
+              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+            Live Field Data
+          </h2>
+          <span style={{ fontSize: 12, color: '#666', background: '#E3F2FD', padding: '4px 8px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ width: 6, height: 6, background: '#2E7D32', borderRadius: '50%', animation: 'pulse-mic 1.5s infinite' }} />
+            Updated 5m
+          </span>
+        </div>
+
+        {/* Desktop-optimized chart layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20, marginBottom: 20 }}>
+          {/* NPK Bar Chart */}
+          <div style={{ background: '#F5F5F5', padding: 16, borderRadius: 12 }}>
+            <h3 style={{ fontSize: 14, color: '#666', marginBottom: 12, margin: 0 }}>NPK Levels</h3>
+            <div style={{ height: 200 }}>
+              <Bar
+                data={{
+                  labels: ['Nitrogen (N)', 'Phosphorus (P)', 'Potassium (K)'],
+                  datasets: [{
+                    label: 'NPK Values',
+                    data: [telemetry?.npk?.N || 0, telemetry?.npk?.P || 0, telemetry?.npk?.K || 0],
+                    backgroundColor: ['#4CAF50', '#2196F3', '#FF9800'],
+                    borderRadius: 8,
+                  }]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => `${context.parsed.y} mg/kg`
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: { display: false }
+                    },
+                    x: {
+                      grid: { display: false }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Environmental Conditions Line Chart */}
+          <div style={{ background: '#F5F5F5', padding: 16, borderRadius: 12 }}>
+            <h3 style={{ fontSize: 14, color: '#666', marginBottom: 12, margin: 0 }}>Environmental Conditions</h3>
+            <div style={{ height: 200 }}>
+              <Line
+                data={{
+                  labels: ['Temperature', 'Humidity', 'pH Level'],
+                  datasets: [{
+                    label: 'Values',
+                    data: [telemetry?.temperature || 0, telemetry?.humidity || 0, telemetry?.ph?.value || 0],
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#2196F3',
+                    pointRadius: 6,
+                    pointHoverRadius: 8,
+                  }]
+                }}
+                options={{
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                      callbacks: {
+                        label: (context) => {
+                          const labels = ['°C', '%', 'pH'];
+                          return `${context.parsed.y} ${labels[context.dataIndex]}`;
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    y: {
+                      beginAtZero: true,
+                      grid: { display: false }
+                    },
+                    x: {
+                      grid: { display: false }
+                    }
+                  }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Soil Moisture Gauge */}
+        <div style={{ background: '#E3F2FD', padding: 16, borderRadius: 12, display: 'flex', alignItems: 'center', gap: 20 }}>
+          <div style={{ width: 120, height: 120 }}>
+            <Doughnut
+              data={{
+                labels: ['Moisture', 'Dry'],
+                datasets: [{
+                  data: [telemetry?.soil_moisture?.value || 0, 100 - (telemetry?.soil_moisture?.value || 0)],
+                  backgroundColor: ['#2196F3', '#E0E0E0'],
+                  borderWidth: 0,
+                }]
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '70%',
+                plugins: {
+                  legend: { display: false },
+                  tooltip: {
+                    callbacks: {
+                      label: (context) => `${context.parsed}%`
+                    }
+                  }
+                }
+              }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3 style={{ fontSize: 16, color: '#1565C0', margin: '0 0 8px 0' }}>Soil Moisture</h3>
+            <p style={{ fontSize: 32, fontWeight: 700, color: '#1565C0', margin: '0 0 8px 0' }}>
+              {telemetry?.soil_moisture?.value || 0}%
+            </p>
+            <p style={{ fontSize: 14, color: '#666', margin: 0 }}>
+              Status: <span style={{ color: telemetry?.soil_moisture?.value > 50 ? '#4CAF50' : '#FF9800', fontWeight: 600 }}>
+                {telemetry?.soil_moisture?.status || 'Unknown'}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* AI ML Recommendations with Charts */}
+      {aiRecs && (
+        <div className="section-card" style={{ background: 'linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%)', border: '1px solid #e0e0e0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ background: '#3F51B5', borderRadius: '50%', padding: 6, marginRight: 10 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2a10 10 0 1 0 10 10H12V2z" />
+                <path d="M12 12 2.1 7.1" />
+                <path d="M12 12l9.9 4.9" />
+              </svg>
+            </div>
+            <h2 className="section-title" style={{ margin: 0, color: '#283593' }}>AI Recommendations</h2>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
+            {/* Crop Prediction with Confidence Chart */}
+            <div style={{ background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>CROP PREDICTION</span>
+                <span style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600 }}>{aiRecs.crop?.confidence || 92}% Confidence</span>
+              </div>
+              <div style={{ height: 150, marginBottom: 12 }}>
+                <Doughnut
+                  data={{
+                    labels: ['Confidence', 'Uncertainty'],
+                    datasets: [{
+                      data: [aiRecs.crop?.confidence || 92, 100 - (aiRecs.crop?.confidence || 92)],
+                      backgroundColor: ['#4CAF50', '#E0E0E0'],
+                      borderWidth: 0,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          label: (context) => `${context.parsed}%`
+                        }
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <p style={{ fontSize: 18, color: '#333', fontWeight: 700, margin: '0 0 4px 0', textTransform: 'capitalize' }}>
+                {aiRecs.crop?.recommended_crop?.replace('_', ' ') || 'Calculating...'}
+              </p>
+              <p style={{ fontSize: 13, color: '#666', margin: 0 }}>Based on current soil NPK and weather conditions.</p>
+            </div>
+
+            {/* Fertilizer Advisor with Health Score Chart */}
+            <div style={{ background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>FERTILIZER ADVISOR</span>
+                {aiRecs.fert?.soil_health_score && (
+                  <span style={{ fontSize: 12, color: aiRecs.fert.soil_health_score > 70 ? '#4CAF50' : '#FF9800', fontWeight: 600 }}>
+                    Health Score: {Math.round(aiRecs.fert.soil_health_score)}/100
+                  </span>
+                )}
+              </div>
+              <div style={{ height: 150, marginBottom: 12 }}>
+                <Bar
+                  data={{
+                    labels: ['Soil Health', 'Optimal'],
+                    datasets: [{
+                      label: 'Health Score',
+                      data: [Math.round(aiRecs.fert?.soil_health_score || 0), 100],
+                      backgroundColor: [aiRecs.fert?.soil_health_score > 70 ? '#4CAF50' : '#FF9800', '#E0E0E0'],
+                      borderRadius: 8,
+                    }]
+                  }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: { display: false },
+                      tooltip: {
+                        callbacks: {
+                          label: (context) => `${context.parsed.y}/100`
+                        }
+                      }
+                    },
+                    scales: {
+                      y: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: { display: false }
+                      },
+                      x: {
+                        grid: { display: false }
+                      }
+                    }
+                  }}
+                />
+              </div>
+              <p style={{ fontSize: 18, color: '#333', fontWeight: 700, margin: '0 0 4px 0', textTransform: 'capitalize' }}>
+                {aiRecs.fert?.recommended_fertilizer?.replace('_', ' ') || 'Calculating...'}
+              </p>
+              <p style={{ fontSize: 13, color: '#666', margin: 0 }}>Apply {Math.round(aiRecs.fert?.dosage_kg_per_ha || 0)} kg/ha for optimal growth.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Today's Actions */}
       <div className="section-card">

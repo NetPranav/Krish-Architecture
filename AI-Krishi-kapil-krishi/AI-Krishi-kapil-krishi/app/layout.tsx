@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Poppins, Noto_Sans_Devanagari } from "next/font/google";
 import "./globals.css";
+import KeepAlive from "./components/KeepAlive";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -41,7 +42,10 @@ export default function RootLayout({
       className={`${poppins.variable} ${notoDevanagari.variable}`}
       suppressHydrationWarning
     >
-      <body suppressHydrationWarning>{children}</body>
+      <body suppressHydrationWarning>
+        <KeepAlive />
+        {children}
+      </body>
     </html>
   );
 }

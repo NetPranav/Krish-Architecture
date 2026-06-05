@@ -180,10 +180,15 @@ export default function MitraAIPage() {
     };
 
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
+      console.warn('Speech recognition error:', event.error);
       setIsListening(false);
       if (event.error === 'not-allowed') {
-        alert('Microphone access denied. Please allow microphone permissions.');
+        alert('Microphone access denied. Please allow microphone permissions in your browser or device settings.');
+      } else if (event.error === 'network') {
+        alert('Voice recognition requires an active internet connection to Google services. Please check your connection.');
+      } else if (event.error !== 'no-speech') {
+        // Silently ignore 'no-speech', but alert for others like 'aborted'
+        console.log(`Speech recognition stopped: ${event.error}`);
       }
     };
 

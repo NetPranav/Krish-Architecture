@@ -1,27 +1,34 @@
 /**
  * SmartAgri API Client
  * Connects Next.js frontend to the FastAPI backend.
- * Change API_BASE to your ngrok URL when running remotely.
+ * Supports Render deployment URL, local development, and legacy ngrok.
  */
+
+// Priority order:
+// 1. NEXT_PUBLIC_API_URL env var (Render deployment URL)
+// 2. Same host as frontend on port 8000 (local network / dev)
+// 3. Fallback to localhost:8000
 
 let API_BASE = "http://localhost:8000";
 
 if (typeof window !== "undefined") {
-  // Dynamically point to the same host as the frontend but on port 8000.
-  // This automatically uses your Wi-Fi IP (192.168.137.83) on the phone!
+  // For local dev: point to the same host as the frontend but on port 8000
   API_BASE = `http://${window.location.hostname}:8000`;
 }
 
-// Fallback to explicitly defined env var if available
+// Render deployment URL overrides everything
 if (process.env.NEXT_PUBLIC_API_URL) {
   API_BASE = process.env.NEXT_PUBLIC_API_URL;
 }
+
 async function apiFetch(path: string, options?: RequestInit) {
   const url = `${API_BASE}${path}`;
   try {
     const res = await fetch(url, {
       ...options,
-      headers: { ...options?.headers },
+      headers: { 
+        ...options?.headers,
+      },
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: res.statusText }));
@@ -135,6 +142,22 @@ export async function scanLeaf(file: File) {
   const form = new FormData();
   form.append("file", file);
   return apiFetch("/api/vision/scan-leaf", { method: "POST", body: form });
+}
+
+// ── ML Models ────────────────────────────────────────────────────
+export async function recommendCrop(sensors: any) {
+  const form = new FormData();
+  form.append("sensors", JSON.stringify(sensors || {}));
+  return apiFetch("/api/crop/recommend", { method: "POST", body: form });
+}
+
+export async function adviseFertilizer(currentCrop: string, soilType: string, days: number, sensors: any) {
+  const form = new FormData();
+  form.append("current_crop", currentCrop);
+  form.append("soil_type", soilType);
+  form.append("days", String(days));
+  form.append("sensors", JSON.stringify(sensors || {}));
+  return apiFetch("/api/fertilizer/advise", { method: "POST", body: form });
 }
 
 // ── Mitra AI Chat ────────────────────────────────────────────────

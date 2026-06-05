@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
@@ -41,16 +41,21 @@ export default function ScannerResultPage() {
   const [lang, setLang] = useState<'en' | 'hi'>('en');
   const [scanResult, setScanResult] = useState<any>(null);
 
-  import('react').then(React => {
-    React.useEffect(() => {
-      const stored = sessionStorage.getItem('scanResult');
-      if (stored) {
-        try {
-          setScanResult(JSON.parse(stored));
-        } catch {}
-      }
-    }, []);
-  });
+  const [scanImage, setScanImage] = useState<string>('/images/diseased-leaf.png');
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem('scanResult');
+    if (stored) {
+      try {
+        setScanResult(JSON.parse(stored));
+      } catch {}
+    }
+    
+    const storedImg = sessionStorage.getItem('scanImage');
+    if (storedImg) {
+      setScanImage(storedImg);
+    }
+  }, []);
 
   const content = {
     en: {
@@ -113,7 +118,7 @@ export default function ScannerResultPage() {
       <div className="disease-card">
         <div className="disease-image-container">
           <Image
-            src="/images/diseased-leaf.png"
+            src={scanImage}
             alt="Diseased leaf scan"
             fill
             style={{ objectFit: 'cover' }}
