@@ -146,6 +146,13 @@ def api_update_profile(land_size: Optional[str] = Form(None), land_unit: Optiona
                                voice_assistance=voice_assistance, language=language)
 
 
+def _extract_state(location: str) -> str:
+    if not location or location == "Unknown Location":
+        return "Maharashtra"
+    if "," in location:
+        return location.split(",")[-1].strip()
+    return location.strip()
+
 # ═══════════════════════════════════════════════════════════════════
 # 3. DASHBOARD (aggregated from all services)
 # ═══════════════════════════════════════════════════════════════════
@@ -154,9 +161,11 @@ def api_dashboard(token: str = Depends(get_token)):
     profile = auth.get_profile(token)
     if not profile:
         profile = {"lat": 20.0, "lon": 73.8, "location": "Unknown"} # fallback
+    
+    state = _extract_state(profile.get("location", "Maharashtra"))
     weather = weather_service.get_current(profile["lat"], profile["lon"])
     telemetry = sensor_store.get_live_telemetry()
-    prices = mandi_service.get_prices()
+    prices = mandi_service.get_prices(state=state)
     alerts = alert_engine.get_all()
 
     # Generate dynamic alerts from live data
@@ -173,10 +182,10 @@ def api_dashboard(token: str = Depends(get_token)):
                     "rain_probability": weather.get("rain_probability", 10),
                     "location": profile["location"]},
         "moisture": telemetry["soil_moisture"],
-        "market": {"commodity": top_commodity.get("name", "Soybeans"),
-                   "price": top_commodity.get("price", 4200),
+        "market": {"commodity": top_commodity.get("name", "Loading..."),
+                   "price": top_commodity.get("price", 0),
                    "unit": top_commodity.get("unit", "₹/qtl"),
-                   "change_pct": round(top_commodity.get("change", 0) / max(top_commodity.get("price", 1), 1) * 100, 1)},
+                   "change_pct": 0},
         "alerts_count": unread,
         "alerts": (sensor_alerts + weather_alerts + [a for a in alerts if not a.get("read")])[:3],
         "actions": [
@@ -206,23 +215,35 @@ def api_weather_forecast(lat: float = 20.0063, lon: float = 73.7895):
 
 
 # ═══════════════════════════════════════════════════════════════════
-# 5. MANDI (10 commodities, 5 APMCs, forecast engine)
+# 5. MANDI (Live Prices)
 # ═══════════════════════════════════════════════════════════════════
 @app.get("/api/mandi/prices", tags=["Mandi"])
-def api_mandi_prices(commodity: Optional[str] = None, search: str = ""):
-    return mandi_service.get_prices(commodity, search)
+def api_mandi_prices(commodity: Optional[str] = None, search: str = "", state: Optional[str] = None, token: str = Depends(get_token)):
+    if not state:
+        profile = auth.get_profile(token)
+        state = _extract_state(profile.get("location", "Maharashtra")) if profile else "Maharashtra"
+    return mandi_service.get_prices(commodity, search, state)
 
 @app.get("/api/mandi/nearby", tags=["Mandi"])
-def api_mandi_nearby(lat: float = 20.0, lon: float = 73.8, sort: str = "nearest"):
-    return mandi_service.get_nearby_mandis(lat, lon, sort)
+def api_mandi_nearby(lat: float = 20.0, lon: float = 73.8, sort: str = "nearest", state: Optional[str] = None, token: str = Depends(get_token)):
+    if not state:
+        profile = auth.get_profile(token)
+        state = _extract_state(profile.get("location", "Maharashtra")) if profile else "Maharashtra"
+    return mandi_service.get_nearby_mandis(lat, lon, sort, state)
 
 @app.get("/api/mandi/detail/{mandi_name}", tags=["Mandi"])
-def api_mandi_detail(mandi_name: str):
-    return mandi_service.get_mandi_detail(mandi_name)
+def api_mandi_detail(mandi_name: str, state: Optional[str] = None, token: str = Depends(get_token)):
+    if not state:
+        profile = auth.get_profile(token)
+        state = _extract_state(profile.get("location", "Maharashtra")) if profile else "Maharashtra"
+    return mandi_service.get_mandi_detail(mandi_name, state)
 
 @app.get("/api/mandi/forecast", tags=["Mandi"])
-def api_mandi_forecast(commodity: str = "onion"):
-    return mandi_service.get_forecast(commodity)
+def api_mandi_forecast(commodity: str = "onion", state: Optional[str] = None, token: str = Depends(get_token)):
+    if not state:
+        profile = auth.get_profile(token)
+        state = _extract_state(profile.get("location", "Maharashtra")) if profile else "Maharashtra"
+    return mandi_service.get_forecast(commodity, state)
 
 
 # ═══════════════════════════════════════════════════════════════════
