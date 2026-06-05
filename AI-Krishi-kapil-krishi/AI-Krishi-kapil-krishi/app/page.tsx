@@ -1,7 +1,32 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import LeafLogo from "@/app/components/ui/LeafLogo";
 
 export default function Home() {
+  const router = useRouter();
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const token = localStorage.getItem("smartagri_token");
+    if (token) {
+      router.replace("/dashboard");
+    } else {
+      setIsChecking(false);
+    }
+  }, [router]);
+
+  if (isChecking) {
+    return (
+      <main className="landing-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <LeafLogo size={80} variant="leaf" />
+      </main>
+    );
+  }
+
   return (
     <main className="landing-page">
       <div className="landing-content">
