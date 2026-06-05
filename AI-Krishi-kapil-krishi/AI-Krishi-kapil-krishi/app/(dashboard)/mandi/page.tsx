@@ -141,7 +141,7 @@ export default function MandiInsightsPage() {
       </div>
 
       {/* Search */}
-      <div className="mandi-search">
+      <div className="mandi-search" style={{ position: 'relative' }}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" strokeWidth="2">
           <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
         </svg>
@@ -149,9 +149,50 @@ export default function MandiInsightsPage() {
           type="text"
           placeholder={lang === 'en' ? 'Search commodities...' : 'वस्तुएं खोजें...'}
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            const val = e.target.value;
+            setSearch(val);
+            if (val.length > 2) {
+              getMandiPrices(val).then(res => {
+                if (res?.commodities) {
+                  setCommodities(res.commodities.map((c: any) => ({
+                    ...c, nameHi: c.name_hi || c.nameHi || c.name,
+                  })));
+                }
+              }).catch(() => {});
+            } else if (val.length === 0) {
+              // Reset to all commodities
+              getMandiPrices().then(res => {
+                if (res?.commodities) {
+                  setCommodities(res.commodities.map((c: any) => ({
+                    ...c, nameHi: c.name_hi || c.nameHi || c.name,
+                  })));
+                }
+              }).catch(() => {});
+            }
+          }}
           className="mandi-search-input"
         />
+        {/* Simple suggestion dropdown */}
+        {search && commodities.length > 0 && search.length > 0 && (
+          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid #eaeaea', borderRadius: 12, marginTop: 8, zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', maxHeight: 200, overflowY: 'auto' }}>
+            {commodities.slice(0, 5).map((c: any) => (
+              <div 
+                key={c.name} 
+                onClick={() => {
+                  setSearch(c.name);
+                  getMandiForecast(c.name).then(res => {
+                    if (res?.forecast_points) setForecastData(res);
+                  }).catch(() => {});
+                }}
+                style={{ padding: '12px 16px', borderBottom: '1px solid #f5f5f5', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}
+              >
+                <span style={{ fontWeight: 600 }}>{lang === 'en' ? c.name : c.nameHi}</span>
+                <span style={{ color: '#2E7D32', fontWeight: 700 }}>₹{c.price}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* AI Recommendation */}
