@@ -96,13 +96,16 @@ export default function MandiInsightsPage() {
   const [commodities, setCommodities] = useState(defaultCommodities);
   const [mandis, setMandis] = useState(defaultMandis);
   const [forecastData, setForecastData] = useState<any>(null);
+  const [selectedCommodity, setSelectedCommodity] = useState<any>(defaultCommodities[0]);
 
   useEffect(() => {
     getMandiPrices().then(res => {
       if (res?.commodities) {
-        setCommodities(res.commodities.map((c: any) => ({
+        const mapped = res.commodities.map((c: any) => ({
           ...c, nameHi: c.name_hi || c.nameHi || c.name,
-        })));
+        }));
+        setCommodities(mapped);
+        if (mapped.length > 0) setSelectedCommodity(mapped[0]);
       }
     }).catch(() => {});
     getMandiNearby().then(res => {
@@ -125,7 +128,7 @@ export default function MandiInsightsPage() {
     return 0;
   });
 
-  const selectedCommodity = commodities?.[0] || defaultCommodities[0];
+  });
 
   return (
     <div className="dashboard-page">
@@ -180,7 +183,8 @@ export default function MandiInsightsPage() {
               <div 
                 key={c.name} 
                 onClick={() => {
-                  setSearch(c.name);
+                  setSearch('');
+                  setSelectedCommodity(c);
                   getMandiForecast(c.name).then(res => {
                     if (res?.forecast_points) setForecastData(res);
                   }).catch(() => {});
@@ -224,15 +228,15 @@ export default function MandiInsightsPage() {
       <div className="section-card" style={{ overflow: 'hidden' }}>
         <div className="chart-header">
           <div>
-            <h2 className="chart-commodity">{lang === 'en' ? selectedCommodity.name : selectedCommodity.nameHi}</h2>
+            <h2 className="chart-commodity">{lang === 'en' ? (selectedCommodity?.name || 'Loading...') : (selectedCommodity?.nameHi || 'Loading...')}</h2>
             <p className="chart-sub">
-              {lang === 'en' ? '15-Day Price Forecast' : '15-दिन का मूल्य पूर्वानुमान'} ({selectedCommodity.unit})
+              {lang === 'en' ? '15-Day Price Forecast' : '15-दिन का मूल्य पूर्वानुमान'} ({selectedCommodity?.unit || '₹/Quintal'})
             </p>
           </div>
           <div className="chart-price-box">
-            <span className="chart-price">₹{selectedCommodity.price.toLocaleString()}</span>
-            <span className={`chart-change ${selectedCommodity.change >= 0 ? 'chart-change--up' : 'chart-change--down'}`}>
-              {selectedCommodity.change >= 0 ? '↗' : '↘'} {selectedCommodity.change >= 0 ? '+' : ''}₹{selectedCommodity.change} today
+            <span className="chart-price">₹{selectedCommodity?.price?.toLocaleString() || '0'}</span>
+            <span className={`chart-change ${(selectedCommodity?.change || 0) >= 0 ? 'chart-change--up' : 'chart-change--down'}`}>
+              {(selectedCommodity?.change || 0) >= 0 ? '↗' : '↘'} {(selectedCommodity?.change || 0) >= 0 ? '+' : ''}₹{selectedCommodity?.change || 0} today
             </span>
           </div>
         </div>
