@@ -213,10 +213,10 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Desktop-optimized chart layout */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20, marginBottom: 20 }}>
+        {/* Scrollable chart layout for mobile */}
+        <div style={{ display: 'flex', overflowX: 'auto', gap: 16, marginBottom: 20, paddingBottom: 8, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
           {/* NPK Bar Chart */}
-          <div style={{ background: '#F5F5F5', padding: 16, borderRadius: 12 }}>
+          <div style={{ minWidth: '85%', scrollSnapAlign: 'center', flexShrink: 0, background: '#F5F5F5', padding: 16, borderRadius: 12 }}>
             <h3 style={{ fontSize: 14, color: '#666', marginBottom: 12, margin: 0 }}>NPK Levels</h3>
             <div style={{ height: 200 }}>
               <Bar
@@ -255,7 +255,7 @@ export default function HomePage() {
           </div>
 
           {/* Environmental Conditions Line Chart */}
-          <div style={{ background: '#F5F5F5', padding: 16, borderRadius: 12 }}>
+          <div style={{ minWidth: '85%', scrollSnapAlign: 'center', flexShrink: 0, background: '#F5F5F5', padding: 16, borderRadius: 12 }}>
             <h3 style={{ fontSize: 14, color: '#666', marginBottom: 12, margin: 0 }}>Environmental Conditions</h3>
             <div style={{ height: 200 }}>
               <Line
@@ -357,9 +357,9 @@ export default function HomePage() {
             <h2 className="section-title" style={{ margin: 0, color: '#283593' }}>AI Recommendations</h2>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 20 }}>
+          <div style={{ display: 'flex', overflowX: 'auto', gap: 16, paddingBottom: 8, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' }}>
             {/* Crop Prediction with Confidence Chart */}
-            <div style={{ background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <div style={{ minWidth: '85%', scrollSnapAlign: 'center', flexShrink: 0, background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                 <span style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>CROP PREDICTION</span>
                 <span style={{ fontSize: 12, color: '#4CAF50', fontWeight: 600 }}>{aiRecs.crop?.confidence || 92}% Confidence</span>
@@ -396,7 +396,7 @@ export default function HomePage() {
             </div>
 
             {/* Fertilizer Advisor with Health Score Chart */}
-            <div style={{ background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+            <div style={{ minWidth: '85%', scrollSnapAlign: 'center', flexShrink: 0, background: '#fff', padding: 20, borderRadius: 12, boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
                 <span style={{ fontSize: 13, color: '#666', fontWeight: 600 }}>FERTILIZER ADVISOR</span>
                 {aiRecs.fert?.soil_health_score && (
