@@ -128,8 +128,6 @@ export default function MandiInsightsPage() {
     return 0;
   });
 
-  });
-
   return (
     <div className="dashboard-page">
       <TopBar location="Nashik, MH" weather="" />
